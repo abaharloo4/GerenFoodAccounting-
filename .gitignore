@@ -31,6 +31,8 @@ release
 .env.local
 .env.*.local
 
-# SQLite database fallback files
+# SQLite and DB config files
 *.sqlite
 *.db
+db_config.json
+
