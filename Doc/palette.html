@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>پالت رنگی - سیستم صندوق کافه</title>
+<style>
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/vazirmatn/33.0.3/font-face.css');
+
+  :root{
+    --primary:#9b152e;
+    --primary-dark:#6e0f22;
+    --primary-tint:#f5e9ea;
+    --primary-tint-2:#ead2d6;
+
+    --ink:#241f21;
+    --ink-soft:#57494c;
+    --muted:#8a7a7d;
+    --border:#e4dcdd;
+    --bg:#faf7f6;
+    --surface:#ffffff;
+
+    --success:#1f7a5c;
+    --success-tint:#e3f2ec;
+    --warning:#b8791f;
+    --warning-tint:#faf1e2;
+    --info:#33456b;
+    --info-tint:#e8ebf1;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Vazirmatn',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    padding:32px 20px 60px;
+  }
+  h1{font-size:22px;margin:0 0 4px;}
+  p.sub{color:var(--ink-soft);margin:0 0 32px;font-size:14px;}
+  h2{font-size:15px;margin:36px 0 12px;color:var(--ink-soft);font-weight:600;border-inline-start:3px solid var(--primary);padding-inline-start:10px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+  .swatch{border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface);}
+  .fill{height:64px;}
+  .meta{padding:10px 12px;}
+  .meta .name{font-size:12.5px;font-weight:600;}
+  .meta .hex{font-size:11.5px;color:var(--muted);font-family:monospace;direction:ltr;text-align:right;margin-top:2px;}
+  .meta .use{font-size:11px;color:var(--ink-soft);margin-top:6px;line-height:1.6;}
+
+  .demo{
+    margin-top:40px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px;
+    max-width:420px;
+  }
+  .demo h3{margin:0 0 14px;font-size:15px;}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed var(--border);font-size:13.5px;}
+  .row:last-child{border-bottom:none;}
+  .row .label{color:var(--ink-soft);}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;}
+  .badge.danger{background:var(--primary-tint);color:var(--primary-dark);}
+  .badge.success{background:var(--success-tint);color:var(--success);}
+  .btn{margin-top:16px;width:100%;padding:11px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+
+  <h1>پالت رنگی سیستم صندوق کافه</h1>
+  <p class="sub">بر پایه‌ی رنگ اصلی #9b152e — قرمز فقط برای برند و وضعیت کسری استفاده می‌شود، بدنه‌ی اصلی UI خنثی و آرام است.</p>
+
+  <h2>برند (Primary) — استفاده‌ی محدود: دکمه‌های اصلی، هدر، حالت کسری</h2>
+  <div class="grid">
+    <div class="swatch"><div class="fill" style="background:var(--primary)"></div>
+      <div class="meta"><div class="name">Primary</div><div class="hex">#9b152e</div><div class="use">دکمه‌ی اصلی، لینک فعال، تیتر برند</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--primary-dark)"></div>
+      <div class="meta"><div class="name">Primary Dark</div><div class="hex">#6e0f22</div><div class="use">حالت hover/pressed دکمه‌ها</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--primary-tint-2)"></div>
+      <div class="meta"><div class="name">Primary Tint 2</div><div class="hex">#ead2d6</div><div class="use">حاشیه/آیکون روی زمینه‌ی روشن</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--primary-tint)"></div>
+      <div class="meta"><div class="name">Primary Tint</div><div class="hex">#f5e9ea</div><div class="use">پس‌زمینه‌ی بج/برچسب کسری</div></div></div>
+  </div>
+
+  <h2>خنثی (Neutral) — بدنه‌ی اصلی رابط کاربری</h2>
+  <div class="grid">
+    <div class="swatch"><div class="fill" style="background:var(--ink)"></div>
+      <div class="meta"><div class="name">Ink</div><div class="hex">#241f21</div><div class="use">متن اصلی</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--ink-soft)"></div>
+      <div class="meta"><div class="name">Ink Soft</div><div class="hex">#57494c</div><div class="use">متن ثانویه/برچسب</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--muted)"></div>
+      <div class="meta"><div class="name">Muted</div><div class="hex">#8a7a7d</div><div class="use">متن غیرفعال/placeholder</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--border)"></div>
+      <div class="meta"><div class="name">Border</div><div class="hex">#e4dcdd</div><div class="use">خط جداکننده، حاشیه‌ی کارت</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--bg);border-bottom:1px solid var(--border)"></div>
+      <div class="meta"><div class="name">Background</div><div class="hex">#faf7f6</div><div class="use">پس‌زمینه‌ی کل صفحه</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--surface);border-bottom:1px solid var(--border)"></div>
+      <div class="meta"><div class="name">Surface</div><div class="hex">#ffffff</div><div class="use">کارت‌ها، فرم‌ها، جدول‌ها</div></div></div>
+  </div>
+
+  <h2>معنایی (Semantic) — نتیجه‌ی محاسبات</h2>
+  <div class="grid">
+    <div class="swatch"><div class="fill" style="background:var(--success)"></div>
+      <div class="meta"><div class="name">Success / اضاف</div><div class="hex">#1f7a5c</div><div class="use">باقی‌مانده‌ی مثبت، تأیید موفق</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--success-tint)"></div>
+      <div class="meta"><div class="name">Success Tint</div><div class="hex">#e3f2ec</div><div class="use">پس‌زمینه‌ی بج اضاف</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--warning)"></div>
+      <div class="meta"><div class="name">Warning / در انتظار</div><div class="hex">#b8791f</div><div class="use">شیفت باز/ثبت‌نشده، هشدار ملایم</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--warning-tint)"></div>
+      <div class="meta"><div class="name">Warning Tint</div><div class="hex">#faf1e2</div><div class="use">پس‌زمینه‌ی بج در انتظار</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--info)"></div>
+      <div class="meta"><div class="name">Info / لینک</div><div class="hex">#33456b</div><div class="use">لینک‌ها، دکمه‌ی ثانویه، گزارش‌ها</div></div></div>
+    <div class="swatch"><div class="fill" style="background:var(--info-tint)"></div>
+      <div class="meta"><div class="name">Info Tint</div><div class="hex">#e8ebf1</div><div class="use">پس‌زمینه‌ی بج اطلاعاتی</div></div></div>
+  </div>
+
+  <h2>نمونه‌ی واقعی</h2>
+  <div class="demo">
+    <h3>تسویه شیفت عصر — ۱۸ مرداد</h3>
+    <div class="row"><span class="label">فروش سیستم</span><span>۱۰۰,۰۰۰,۰۰۰</span></div>
+    <div class="row"><span class="label">فروش کارتخوان + نقد</span><span>۹۸,۰۰۰,۰۰۰</span></div>
+    <div class="row"><span class="label">جمع اعتباری</span><span>۲۰۰,۰۰۰</span></div>
+    <div class="row"><span class="label">کسری شناخته‌شده</span><span class="badge danger">۱,۰۰۰,۰۰۰</span></div>
+    <div class="row"><span class="label">باقی‌مانده‌ی ناشناخته</span><span class="badge danger">۸۰۰,۰۰۰ کسری</span></div>
+    <button class="btn">ثبت نهایی شیفت</button>
+  </div>
+
+</body>
+</html>

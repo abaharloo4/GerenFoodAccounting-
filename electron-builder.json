@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.geren.foodaccounting",
+  "productName": "GerenFoodAccounting",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist",
+    "dist-electron"
+  ],
+  "win": {
+    "executableName": "GerenFoodAccounting",
+    "target": ["nsis"],
+    "forceCodeSigning": false,
+    "signAndEditExecutable": false
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "abaharloo4",
+    "repo": "GerenFoodAccounting-"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "سیستم حسابداری گرن"
+  }
+}

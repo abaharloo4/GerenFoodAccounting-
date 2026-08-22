@@ -1,0 +1,129 @@
+@import '@fontsource-variable/vazirmatn';
+
+:root {
+  --font-family: 'Vazirmatn Variable', 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Brand Palette from Doc/palette.html (#9b152e) */
+  --primary: #9b152e;
+  --primary-dark: #6e0f22;
+  --primary-tint: #f5e9ea;
+  --primary-tint-2: #ead2d6;
+
+  --ink: #241f21;
+  --ink-soft: #57494c;
+  --muted: #8a7a7d;
+  --border: #e4dcdd;
+  --bg: #faf7f6;
+  --surface: #ffffff;
+
+  --success: #1f7a5c;
+  --success-tint: #e3f2ec;
+  --warning: #b8791f;
+  --warning-tint: #faf1e2;
+  --info: #33456b;
+  --info-tint: #e8ebf1;
+
+  /* App Theme Variables */
+  --bg-primary: #12090b;
+  --bg-secondary: #221216;
+  --bg-card: rgba(34, 18, 22, 0.75);
+  --bg-card-border: rgba(234, 210, 214, 0.15);
+  
+  --accent-primary: #9b152e;
+  --accent-primary-hover: #6e0f22;
+  --accent-success: #1f7a5c;
+  --accent-danger: #9b152e;
+  --accent-warning: #b8791f;
+  --accent-info: #33456b;
+  
+  --text-primary: #fcf8f8;
+  --text-secondary: #d4c5c7;
+  --text-muted: #8a7a7d;
+  
+  --border-radius: 12px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*,
+*::before,
+*::after,
+input,
+button,
+select,
+textarea,
+option,
+optgroup,
+table,
+th,
+td,
+div,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+label,
+a {
+  box-sizing: border-box;
+  font-family: var(--font-family) !important;
+}
+
+body {
+  font-family: var(--font-family) !important;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  direction: rtl;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Guarantee input fields receive pointer events and keyboard focus */
+input,
+button,
+select,
+textarea,
+option {
+  font-family: var(--font-family) !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+/* Styling for select dropdown option elements in Chromium */
+option {
+  background-color: #1e293b;
+  color: #f8fafc;
+  padding: 0.5rem;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-family) !important;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
