@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { Readable } from 'node:stream';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 
 export const GITHUB_OWNER = 'abaharloo4';
 export const GITHUB_REPO = 'GerenFoodAccounting-';
@@ -55,30 +55,7 @@ export function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-/**
- * ارسال درخواست HTTP/HTTPS به همراه پشتیبانی از Redirect
- */
-async function fetchJsonWithRedirect(url: string, headers: Record<string, string> = {}): Promise<any> {
-  if (typeof fetch === 'function') {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'GerenFoodAccounting-Updater', ...headers },
-      redirect: 'follow',
-    });
-
-    if (res.status === 404) {
-      return null;
-    }
-
-    if (!res.ok) {
-      if (res.status === 403) {
-        throw new Error('محدودیت نرخ درخواست گیتهاب (Rate Limit). لطفاً چند دقیقه بعد مجدداً تلاش نمایید.');
-      }
-      throw new Error(`درخواست به گیتهاب با وضعیت ${res.status} ناموفق بود.`);
-    }
-
-    return await res.json();
-  }
-
+async function fetchJsonWithHttps(url: string, headers: Record<string, string> = {}): Promise<any> {
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? https : http;
     const req = client.get(url, { headers: { 'User-Agent': 'GerenFoodAccounting-Updater', ...headers } }, (res) => {
@@ -117,18 +94,58 @@ async function fetchJsonWithRedirect(url: string, headers: Record<string, string
 }
 
 /**
+ * ارسال درخواست HTTP/HTTPS به همراه پشتیبانی از Redirect و خطایابی خودکار
+ */
+async function fetchJsonWithRedirect(url: string, headers: Record<string, string> = {}): Promise<any> {
+  if (typeof fetch === 'function') {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'GerenFoodAccounting-Updater', ...headers },
+        redirect: 'follow',
+      });
+
+      if (res.status === 404) {
+        return null;
+      }
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          throw new Error('محدودیت نرخ درخواست گیتهاب (Rate Limit). لطفاً چند دقیقه بعد مجدداً تلاش نمایید.');
+        }
+        throw new Error(`درخواست به گیتهاب با وضعیت ${res.status} ناموفق بود.`);
+      }
+
+      return await res.json();
+    } catch (err: any) {
+      if (err.message && err.message.includes('Rate Limit')) {
+        throw err;
+      }
+      // Fallback to node https on TLS / socket error
+      return fetchJsonWithHttps(url, headers);
+    }
+  }
+
+  return fetchJsonWithHttps(url, headers);
+}
+
+/**
  * بررسی انتشار نسخه جدید در مخزن گیتهاب
  */
 export async function checkForUpdates(customCurrentVersion?: string): Promise<{ success: boolean; updateInfo?: UpdateInfo; error?: string }> {
   try {
-    // Determine current version dynamically — never hardcode a fallback
-    let currentVersion = customCurrentVersion;
-    if (!currentVersion) {
-      try {
-        currentVersion = app && typeof app.getVersion === 'function' ? app.getVersion() : '0.0.0';
-      } catch {
-        currentVersion = '0.0.0';
+    // Single source of truth: runtime app.getVersion()
+    let currentVersion = '0.0.0';
+    try {
+      if (app && typeof app.getVersion === 'function') {
+        currentVersion = app.getVersion();
       }
+    } catch {
+      // Ignore
+    }
+
+    // Only allow customCurrentVersion if app.getVersion() was not available and not placeholder
+    if ((!currentVersion || currentVersion === '0.0.0') && customCurrentVersion && customCurrentVersion !== '...' && !customCurrentVersion.includes('...')) {
+      currentVersion = customCurrentVersion;
     }
 
     const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
@@ -208,68 +225,82 @@ export async function downloadUpdate(
     const filename = path.basename(parsedUrl.pathname) || `GerenFoodAccounting_Setup_${Date.now()}.exe`;
     const targetFilePath = path.join(tempDir, filename);
 
-    if (typeof fetch === 'function') {
-      const res = await fetch(downloadUrl, {
-        headers: { 'User-Agent': 'GerenFoodAccounting-Updater' },
-        redirect: 'follow',
+    if (onProgress) {
+      onProgress({
+        percent: 0,
+        transferredBytes: 0,
+        totalBytes: 0,
+        speedBytesPerSec: 0,
+        formattedProgress: 'در حال برقراری اتصال به سرور و آغاز دریافت فایل...',
       });
+    }
 
-      if (!res.ok) {
-        return { success: false, error: `خطا در دریافت فایل دانلود (وضعیت: ${res.status})` };
-      }
-
-      const totalBytes = Number(res.headers.get('content-length')) || 0;
-      let transferredBytes = 0;
-      const startTime = Date.now();
-      let lastProgressUpdate = Date.now();
-
-      const fileStream = fs.createWriteStream(targetFilePath);
-
-      if (res.body) {
-        const nodeStream = Readable.fromWeb(res.body as any);
-
-        nodeStream.on('data', (chunk: Buffer) => {
-          transferredBytes += chunk.length;
-          const now = Date.now();
-          if (now - lastProgressUpdate > 150) {
-            lastProgressUpdate = now;
-            const durationSec = (now - startTime) / 1000 || 0.1;
-            const speedBytesPerSec = transferredBytes / durationSec;
-            const percent = totalBytes > 0 ? Math.min(100, Math.round((transferredBytes / totalBytes) * 100)) : 0;
-            const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
-            const totalMB = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
-            const speedMB = (speedBytesPerSec / (1024 * 1024)).toFixed(1);
-
-            if (onProgress) {
-              onProgress({
-                percent,
-                transferredBytes,
-                totalBytes,
-                speedBytesPerSec,
-                formattedProgress: `${transferredMB} MB از ${totalMB} MB (${speedMB} MB/s)`,
-              });
-            }
-          }
+    if (typeof fetch === 'function') {
+      try {
+        const res = await fetch(downloadUrl, {
+          headers: { 'User-Agent': 'GerenFoodAccounting-Updater' },
+          redirect: 'follow',
         });
 
-        await new Promise<void>((resolve, reject) => {
-          nodeStream.pipe(fileStream);
-          fileStream.on('finish', () => resolve());
-          nodeStream.on('error', reject);
-          fileStream.on('error', reject);
-        });
-
-        if (onProgress) {
-          onProgress({
-            percent: 100,
-            transferredBytes,
-            totalBytes: totalBytes || transferredBytes,
-            speedBytesPerSec: 0,
-            formattedProgress: 'دانلود با موفقیت تکمیل شد.',
-          });
+        if (!res.ok) {
+          return { success: false, error: `خطا در دریافت فایل دانلود (وضعیت: ${res.status})` };
         }
 
-        return { success: true, filePath: targetFilePath };
+        const totalBytes = Number(res.headers.get('content-length')) || 0;
+        let transferredBytes = 0;
+        const startTime = Date.now();
+        let lastProgressUpdate = Date.now();
+
+        const fileStream = fs.createWriteStream(targetFilePath);
+
+        if (res.body) {
+          const nodeStream = Readable.fromWeb(res.body as any);
+
+          nodeStream.on('data', (chunk: Buffer) => {
+            transferredBytes += chunk.length;
+            const now = Date.now();
+            if (now - lastProgressUpdate > 80) {
+              lastProgressUpdate = now;
+              const durationSec = (now - startTime) / 1000 || 0.1;
+              const speedBytesPerSec = transferredBytes / durationSec;
+              const percent = totalBytes > 0 ? Math.min(100, Math.round((transferredBytes / totalBytes) * 100)) : 0;
+              const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
+              const totalMB = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+              const speedMB = (speedBytesPerSec / (1024 * 1024)).toFixed(1);
+
+              if (onProgress) {
+                onProgress({
+                  percent,
+                  transferredBytes,
+                  totalBytes,
+                  speedBytesPerSec,
+                  formattedProgress: `${transferredMB} MB از ${totalMB} MB — سرعت: ${speedMB} MB/s`,
+                });
+              }
+            }
+          });
+
+          await new Promise<void>((resolve, reject) => {
+            nodeStream.pipe(fileStream);
+            fileStream.on('finish', () => resolve());
+            nodeStream.on('error', reject);
+            fileStream.on('error', reject);
+          });
+
+          if (onProgress) {
+            onProgress({
+              percent: 100,
+              transferredBytes: totalBytes || transferredBytes,
+              totalBytes: totalBytes || transferredBytes,
+              speedBytesPerSec: 0,
+              formattedProgress: 'دانلود فایل نصاب با موفقیت پایان یافت (۱۰۰٪).',
+            });
+          }
+
+          return { success: true, filePath: targetFilePath };
+        }
+      } catch {
+        // Fallback to node https/http client
       }
     }
 
@@ -380,12 +411,27 @@ export async function installUpdate(filePath: string): Promise<{ success: boolea
 
     child.unref();
 
-    // Close current Electron application so the installer can update files smoothly
+    // Close current Electron application forcefully so the installer can replace files without file locks
     setTimeout(() => {
-      if (app && typeof app.quit === 'function') {
-        app.quit();
+      try {
+        const windows = BrowserWindow.getAllWindows();
+        for (const win of windows) {
+          try {
+            win.destroy();
+          } catch {}
+        }
+      } catch {}
+
+      try {
+        if (app && typeof app.exit === 'function') {
+          app.exit(0);
+        } else if (app && typeof app.quit === 'function') {
+          app.quit();
+        }
+      } catch {
+        process.exit(0);
       }
-    }, 800);
+    }, 400);
 
     return { success: true };
   } catch (err: any) {

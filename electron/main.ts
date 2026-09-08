@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,8 +32,22 @@ app.name = 'GerenFoodAccounting';
 
 let mainWindow: BrowserWindow | null = null;
 
+function getAppIconPath(): string | undefined {
+  const candidates = [
+    path.join(__dirname, '../dist/icon.ico'),
+    path.join(__dirname, '../dist/icon.png'),
+    path.join(__dirname, '../build/icon.ico'),
+    path.join(__dirname, '../public/icon.ico'),
+    path.join(__dirname, '../public/icon.png'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return undefined;
+}
+
 function createWindow() {
-  const iconPath = path.join(__dirname, '../public/icon.ico');
+  const iconPath = getAppIconPath();
 
   mainWindow = new BrowserWindow({
     width: 1150,

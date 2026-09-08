@@ -485,10 +485,11 @@ export default function ManagerDashboard() {
     setIsCheckingUpdate(true);
     setUpdateMessage(null);
     try {
-      const res = await apiBridge.checkForUpdates(currentAppVersion);
+      const res = await apiBridge.checkForUpdates();
       setHasCheckedOnce(true);
       if (res.success && res.updateInfo) {
         setUpdateInfo(res.updateInfo);
+        setCurrentAppVersion(res.updateInfo.currentVersion);
         if (res.updateInfo.hasUpdate) {
           setUpdateMessage({
             type: 'info',
@@ -527,6 +528,13 @@ export default function ManagerDashboard() {
 
     setIsDownloadingUpdate(true);
     setDownloadedFilePath(null);
+    setDownloadProgress({
+      percent: 0,
+      transferredBytes: 0,
+      totalBytes: 0,
+      speedBytesPerSec: 0,
+      formattedProgress: 'در حال اتصال به سرور گیتهاب و شروع دانلود...',
+    });
     setUpdateMessage({ type: 'info', text: 'در حال دانلود بسته به‌روزرسانی از گیتهاب...' });
     try {
       const res = await apiBridge.downloadUpdate(updateInfo.downloadUrl);
@@ -2258,53 +2266,91 @@ export default function ManagerDashboard() {
                 </div>
               </div>
 
-              {/* Download Progress Bar */}
-              {isDownloadingUpdate && downloadProgress && (
+              {/* Real-time Download Progress Bar */}
+              {(isDownloadingUpdate || (downloadProgress && !downloadedFilePath)) && (
                 <div style={{
-                  background: 'rgba(15, 23, 42, 0.7)',
-                  border: '1px solid rgba(236, 72, 153, 0.3)',
-                  borderRadius: '14px',
-                  padding: '1.25rem',
+                  background: 'rgba(15, 23, 42, 0.8)',
+                  border: '1px solid rgba(236, 72, 153, 0.4)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.75rem',
+                  gap: '0.85rem',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                    <span style={{ color: '#f8fafc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite', color: '#f472b6' }} />
-                      <span>در حال دریافت فایل نصاب از سرور گیتهاب...</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#f8fafc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <RefreshCw size={17} style={{ animation: 'spin 1s linear infinite', color: '#f472b6' }} />
+                      <span>{downloadProgress?.percent === 100 ? 'دانلود فایل نصاب تکمیل شد' : 'در حال دریافت بسته نصاب از سرور گیتهاب...'}</span>
                     </span>
-                    <span style={{ color: '#f472b6', fontWeight: 800, fontSize: '0.95rem' }}>
-                      %{downloadProgress.percent}
+                    <span style={{ color: '#f472b6', fontWeight: 800, fontSize: '1.1rem', direction: 'ltr' }}>
+                      %{downloadProgress ? downloadProgress.percent : 0}
                     </span>
                   </div>
 
                   <div style={{
                     width: '100%',
-                    height: '10px',
+                    height: '12px',
                     background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '5px',
+                    borderRadius: '6px',
                     overflow: 'hidden',
                   }}>
                     <div style={{
-                      width: `${downloadProgress.percent}%`,
+                      width: `${downloadProgress ? Math.max(3, downloadProgress.percent) : 3}%`,
                       height: '100%',
-                      background: 'linear-gradient(90deg, #ec4899 0%, #d946ef 100%)',
-                      borderRadius: '5px',
+                      background: 'linear-gradient(90deg, #ec4899 0%, #a855f7 50%, #6366f1 100%)',
+                      borderRadius: '6px',
                       transition: 'width 0.2s ease',
-                      boxShadow: '0 0 10px #ec4899',
+                      boxShadow: '0 0 12px rgba(236, 72, 153, 0.6)',
                     }} />
                   </div>
 
-                  <div style={{ fontSize: '0.775rem', color: '#94a3b8', textAlign: 'left', direction: 'ltr' }}>
-                    {downloadProgress.formattedProgress}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>
+                    <span>مرحله: {downloadProgress?.percent === 100 ? 'پایان دانلود — آماده نصب' : 'در حال دریافت داده‌ها'}</span>
+                    <span style={{ direction: 'ltr', color: '#cbd5e1', fontWeight: 600 }}>
+                      {downloadProgress ? downloadProgress.formattedProgress : 'در حال برقراری ارتباط...'}
+                    </span>
                   </div>
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                {downloadedFilePath ? (
+              {/* Download Completed Banner */}
+              {downloadedFilePath && !isDownloadingUpdate && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  borderRadius: '16px',
+                  padding: '1.25rem 1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                  boxShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#34d399',
+                    }}>
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '0.95rem' }}>
+                        فایل نصاب با موفقیت ۱۰۰٪ دانلود شد
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                        برای اتمام کار و اعمال تغییرات، روی دکمه «راه‌اندازی مجدد و نصب نهایی» کلیک نمایید.
+                      </div>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleInstallUpdate}
@@ -2313,22 +2359,27 @@ export default function ManagerDashboard() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.6rem',
-                      padding: '0.9rem 2.2rem',
+                      padding: '0.85rem 1.8rem',
                       background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       border: 'none',
                       borderRadius: '12px',
                       color: '#ffffff',
                       fontWeight: 800,
-                      fontSize: '1rem',
+                      fontSize: '0.95rem',
                       cursor: isInstallingUpdate ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 8px 24px -4px rgba(16, 185, 129, 0.5)',
+                      boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.5)',
                       transition: 'all 0.2s',
                     }}
                   >
-                    <Sparkles size={20} />
-                    <span>{isInstallingUpdate ? 'در حال راه‌اندازی نصاب...' : 'راه‌اندازی مجدد و نصب نهایی نسخه جدید'}</span>
+                    <Sparkles size={18} />
+                    <span>{isInstallingUpdate ? 'در حال خروج و اجرای نصاب...' : 'راه‌اندازی مجدد و نصب نهایی'}</span>
                   </button>
-                ) : (
+                </div>
+              )}
+
+              {/* Action Buttons (Download trigger) */}
+              {!downloadedFilePath && (
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                   <button
                     type="button"
                     onClick={handleDownloadUpdate}
@@ -2350,10 +2401,10 @@ export default function ManagerDashboard() {
                     }}
                   >
                     <Download size={20} />
-                    <span>{isDownloadingUpdate ? 'در حال دانلود...' : 'دانلود و آماده‌سازی نسخه جدید'}</span>
+                    <span>{isDownloadingUpdate ? 'در حال دانلود فایل نصاب...' : 'دانلود و آماده‌سازی نسخه جدید'}</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
