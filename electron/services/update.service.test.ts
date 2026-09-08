@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compareVersions } from './update.service';
+import { compareVersions, checkForUpdates } from './update.service';
 
 describe('Update Service - Version Comparison Tests', () => {
   it('should detect higher new versions correctly', () => {
@@ -29,4 +29,21 @@ describe('Update Service - Version Comparison Tests', () => {
     expect(compareVersions('', '')).toBe(0);
     expect(compareVersions('0.0.0', '1.0.5')).toBe(-1);
   });
+
+  it('should query live GitHub release and detect v1.0.5 for version 1.0.4', async () => {
+    const res = await checkForUpdates('1.0.4');
+    expect(res.success).toBe(true);
+    expect(res.updateInfo).toBeDefined();
+    expect(res.updateInfo?.latestVersion).toBe('1.0.5');
+    expect(res.updateInfo?.hasUpdate).toBe(true);
+    expect(res.updateInfo?.downloadUrl).toBeDefined();
+    expect(res.updateInfo?.downloadUrl?.toLowerCase()).toContain('.exe');
+  }, 15000);
+
+  it('should report no update when current version is already 1.0.5', async () => {
+    const res = await checkForUpdates('1.0.5');
+    expect(res.success).toBe(true);
+    expect(res.updateInfo).toBeDefined();
+    expect(res.updateInfo?.hasUpdate).toBe(false);
+  }, 15000);
 });

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
+import { Readable } from 'node:stream';
 import { app } from 'electron';
 
 export const GITHUB_OWNER = 'abaharloo4';
@@ -57,7 +58,27 @@ export function compareVersions(v1: string, v2: string): number {
 /**
  * ارسال درخواست HTTP/HTTPS به همراه پشتیبانی از Redirect
  */
-function fetchJsonWithRedirect(url: string, headers: Record<string, string> = {}): Promise<any> {
+async function fetchJsonWithRedirect(url: string, headers: Record<string, string> = {}): Promise<any> {
+  if (typeof fetch === 'function') {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'GerenFoodAccounting-Updater', ...headers },
+      redirect: 'follow',
+    });
+
+    if (res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      if (res.status === 403) {
+        throw new Error('محدودیت نرخ درخواست گیتهاب (Rate Limit). لطفاً چند دقیقه بعد مجدداً تلاش نمایید.');
+      }
+      throw new Error(`درخواست به گیتهاب با وضعیت ${res.status} ناموفق بود.`);
+    }
+
+    return await res.json();
+  }
+
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? https : http;
     const req = client.get(url, { headers: { 'User-Agent': 'GerenFoodAccounting-Updater', ...headers } }, (res) => {
@@ -187,6 +208,71 @@ export async function downloadUpdate(
     const filename = path.basename(parsedUrl.pathname) || `GerenFoodAccounting_Setup_${Date.now()}.exe`;
     const targetFilePath = path.join(tempDir, filename);
 
+    if (typeof fetch === 'function') {
+      const res = await fetch(downloadUrl, {
+        headers: { 'User-Agent': 'GerenFoodAccounting-Updater' },
+        redirect: 'follow',
+      });
+
+      if (!res.ok) {
+        return { success: false, error: `خطا در دریافت فایل دانلود (وضعیت: ${res.status})` };
+      }
+
+      const totalBytes = Number(res.headers.get('content-length')) || 0;
+      let transferredBytes = 0;
+      const startTime = Date.now();
+      let lastProgressUpdate = Date.now();
+
+      const fileStream = fs.createWriteStream(targetFilePath);
+
+      if (res.body) {
+        const nodeStream = Readable.fromWeb(res.body as any);
+
+        nodeStream.on('data', (chunk: Buffer) => {
+          transferredBytes += chunk.length;
+          const now = Date.now();
+          if (now - lastProgressUpdate > 150) {
+            lastProgressUpdate = now;
+            const durationSec = (now - startTime) / 1000 || 0.1;
+            const speedBytesPerSec = transferredBytes / durationSec;
+            const percent = totalBytes > 0 ? Math.min(100, Math.round((transferredBytes / totalBytes) * 100)) : 0;
+            const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
+            const totalMB = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+            const speedMB = (speedBytesPerSec / (1024 * 1024)).toFixed(1);
+
+            if (onProgress) {
+              onProgress({
+                percent,
+                transferredBytes,
+                totalBytes,
+                speedBytesPerSec,
+                formattedProgress: `${transferredMB} MB از ${totalMB} MB (${speedMB} MB/s)`,
+              });
+            }
+          }
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          nodeStream.pipe(fileStream);
+          fileStream.on('finish', () => resolve());
+          nodeStream.on('error', reject);
+          fileStream.on('error', reject);
+        });
+
+        if (onProgress) {
+          onProgress({
+            percent: 100,
+            transferredBytes,
+            totalBytes: totalBytes || transferredBytes,
+            speedBytesPerSec: 0,
+            formattedProgress: 'دانلود با موفقیت تکمیل شد.',
+          });
+        }
+
+        return { success: true, filePath: targetFilePath };
+      }
+    }
+
     return new Promise((resolve) => {
       function startDownload(targetUrl: string) {
         const client = targetUrl.startsWith('https') ? https : http;
@@ -261,7 +347,12 @@ export async function downloadUpdate(
         });
 
         req.on('error', (err) => {
-          resolve({ success: false, error: `خطا در اتصال: ${err.message}` });
+          try {
+            if (fs.existsSync(targetFilePath)) fs.unlinkSync(targetFilePath);
+          } catch {
+            // Ignore
+          }
+          resolve({ success: false, error: `خطا در ارتباط: ${err.message}` });
         });
       }
 
