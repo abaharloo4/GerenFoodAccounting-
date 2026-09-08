@@ -15,8 +15,8 @@
   Delete "$SMPROGRAMS\سیستم حسابداری گرن\*.lnk"
   RMDir "$SMPROGRAMS\سیستم حسابداری گرن"
 
-  ; Delete old shortcut so NSIS recreates fresh with new icon
-  Delete "$DESKTOP\GerenFoodAccounting.lnk"
+  ; Explicitly ensure Desktop shortcut is created with fresh icon
+  CreateShortCut "$DESKTOP\GerenFoodAccounting.lnk" "$INSTDIR\GerenFoodAccounting.exe" "" "$INSTDIR\GerenFoodAccounting.exe" 0
 
   ; Force Windows Explorer to refresh icon cache immediately
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'

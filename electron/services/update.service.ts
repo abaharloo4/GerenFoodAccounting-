@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
-import { Readable } from 'node:stream';
 import { app, BrowserWindow } from 'electron';
 
 export const GITHUB_OWNER = 'abaharloo4';
@@ -254,10 +253,16 @@ export async function downloadUpdate(
         const fileStream = fs.createWriteStream(targetFilePath);
 
         if (res.body) {
-          const nodeStream = Readable.fromWeb(res.body as any);
+          const reader = (res.body as any).getReader();
 
-          nodeStream.on('data', (chunk: Buffer) => {
-            transferredBytes += chunk.length;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunkBuf = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+            transferredBytes += chunkBuf.length;
+            fileStream.write(chunkBuf);
+
             const now = Date.now();
             if (now - lastProgressUpdate > 80) {
               lastProgressUpdate = now;
@@ -278,12 +283,10 @@ export async function downloadUpdate(
                 });
               }
             }
-          });
+          }
 
           await new Promise<void>((resolve, reject) => {
-            nodeStream.pipe(fileStream);
-            fileStream.on('finish', () => resolve());
-            nodeStream.on('error', reject);
+            fileStream.end(() => resolve());
             fileStream.on('error', reject);
           });
 
@@ -330,7 +333,7 @@ export async function downloadUpdate(
             fileStream.write(chunk);
 
             const now = Date.now();
-            if (now - lastProgressUpdate > 150) {
+            if (now - lastProgressUpdate > 80) {
               lastProgressUpdate = now;
               const durationSec = (now - startTime) / 1000 || 0.1;
               const speedBytesPerSec = transferredBytes / durationSec;
@@ -346,7 +349,7 @@ export async function downloadUpdate(
                   transferredBytes,
                   totalBytes,
                   speedBytesPerSec,
-                  formattedProgress: `${transferredMB} MB از ${totalMB} MB (${speedMB} MB/s)`,
+                  formattedProgress: `${transferredMB} MB از ${totalMB} MB — سرعت: ${speedMB} MB/s`,
                 });
               }
             }
