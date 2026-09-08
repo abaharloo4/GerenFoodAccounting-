@@ -13,6 +13,15 @@ export interface ShiftReportFilter {
   shiftType?: 'morning' | 'evening' | 'all';
 }
 
+function getAppVersionString(): string {
+  try {
+    if (app && typeof app.getVersion === 'function') {
+      return app.getVersion();
+    }
+  } catch {}
+  return '1.0.6';
+}
+
 export interface ShiftReportItem {
   id: number;
   shift_date_shamsi: string;
@@ -370,7 +379,7 @@ export async function exportShiftsToCSV(filters: ShiftReportFilter = {}): Promis
 
     // Add empty row spacing and footer row in Excel
     worksheet.addRow([]);
-    const footerRow = worksheet.addRow(['سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه 1.0.5']);
+    const footerRow = worksheet.addRow([`سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه ${getAppVersionString()}`]);
     worksheet.mergeCells(`A${footerRow.number}:V${footerRow.number}`);
     const footerCell = worksheet.getCell(`A${footerRow.number}`);
     footerCell.font = { name: 'Segoe UI', size: 9.5, italic: true, bold: true, color: { argb: 'FF64748B' } };
@@ -687,7 +696,7 @@ export async function exportShiftsToPDF(filters: ShiftReportFilter = {}): Promis
 </table>
 
 <div class="footer">
-  <div>سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه 1.0.5</div>
+  <div>سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه ${getAppVersionString()}</div>
   <div>صفحه ۱ از ۱</div>
 </div>
 
