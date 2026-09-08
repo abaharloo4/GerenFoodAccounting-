@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import ChangePasswordModal from './ChangePasswordModal';
-import { Coffee, LogOut, User as UserIcon, Shield, KeyRound, Calendar, Clock } from 'lucide-react';
+import { LogOut, User as UserIcon, Shield, KeyRound, Calendar, Clock } from 'lucide-react';
 import { getTodayShamsi, getTehranLiveTime } from '../utils/dateUtils';
 
 export default function Navbar() {
@@ -40,13 +40,18 @@ export default function Navbar() {
             width: '40px',
             height: '40px',
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, #9b152e 0%, #6e0f22 100%)',
+            background: 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(155, 21, 46, 0.4)',
+            boxShadow: '0 4px 12px rgba(49, 46, 129, 0.4)',
+            border: '1px solid rgba(99, 102, 241, 0.4)',
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: '1.25rem',
+            fontFamily: 'Segoe UI, sans-serif',
           }}>
-            <Coffee size={22} color="#ffffff" />
+            G
           </div>
           <div>
             <h1 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fcf8f8', margin: 0 }}>

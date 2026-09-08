@@ -27,15 +27,20 @@ import { setupBackupHandlers } from './ipc/backup.handlers';
 import { setupUpdateHandlers } from './ipc/update.handlers';
 import { createAutoBackup } from './services/backup.service';
 
+app.name = 'GerenFoodAccounting';
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
+  const iconPath = path.join(__dirname, '../public/icon.ico');
+
   mainWindow = new BrowserWindow({
     width: 1150,
     height: 800,
     minWidth: 950,
     minHeight: 680,
-    title: 'سیستم حسابداری گرن | GerenFoodAccounting',
+    title: 'GerenFoodAccounting',
+    icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

@@ -281,7 +281,7 @@ export function startHttpServer() {
     }
   });
 
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[HTTP Server] Running on http://localhost:${PORT}/api for browser/Vite fallback.`);
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`[HTTP Server] Running on http://127.0.0.1:${PORT}/api for browser/Vite fallback.`);
   });
 }

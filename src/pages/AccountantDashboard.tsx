@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ShiftEntryForm from './ShiftEntryForm';
 import type { ShiftFullRecord } from '../../electron/services/shift.service';
-import { PlusCircle, History, Clock, RefreshCw, CheckCircle2, Lock, Pencil, Sun, Moon, AlertTriangle, User, Eye } from 'lucide-react';
+import { PlusCircle, History, Clock, RefreshCw, CheckCircle2, Lock, Pencil, Sun, Moon, AlertTriangle, User, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTodayShamsi } from '../utils/dateUtils';
 import { apiBridge } from '../services/apiBridge';
 import SystemConfirmModal from '../components/SystemConfirmModal';
+import Footer from '../components/Footer';
 
 interface ShiftRecord {
   id: number;
@@ -39,6 +40,19 @@ export default function AccountantDashboard() {
 
   const [shifts, setShifts] = useState<ShiftRecord[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
+
+  // Pagination state
+  const [shiftPage, setShiftPage] = useState<number>(1);
+  const SHIFTS_PER_PAGE = 10;
+
+  const totalShiftPages = useMemo(() => {
+    return Math.ceil(shifts.length / SHIFTS_PER_PAGE) || 1;
+  }, [shifts]);
+
+  const paginatedShifts = useMemo(() => {
+    const start = (shiftPage - 1) * SHIFTS_PER_PAGE;
+    return shifts.slice(start, start + SHIFTS_PER_PAGE);
+  }, [shifts, shiftPage]);
 
   // Shift details modal state
   const [selectedShiftDetails, setSelectedShiftDetails] = useState<ShiftFullRecord | null>(null);
@@ -505,7 +519,8 @@ export default function AccountantDashboard() {
             هنوز هیچ شیفتی ثبت نشده است. از دکمه بالا اقدام به ثبت اولین شیفت خود نمایید.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <>
+            <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl', textAlign: 'right' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8', fontSize: '0.825rem' }}>
@@ -522,7 +537,7 @@ export default function AccountantDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {shifts.map((s) => {
+                {paginatedShifts.map((s) => {
                   const isShortage = s.unknown_remainder < 0;
                   const isSurplus = s.unknown_remainder > 0;
                   return (
@@ -649,20 +664,105 @@ export default function AccountantDashboard() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
 
-      {/* Footer */}
-      <footer style={{
-        marginTop: '3rem',
-        paddingTop: '1.5rem',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        textAlign: 'center',
-        color: '#64748b',
-        fontSize: '0.8rem',
-      }}>
-        سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه 1.0.2
-      </footer>
+          {/* Shifts Pagination Controls */}
+          {totalShiftPages > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: '1.25rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                صفحه <strong style={{ color: '#f8fafc' }}>{shiftPage}</strong> از <strong style={{ color: '#f8fafc' }}>{totalShiftPages}</strong> (مجموع <strong style={{ color: '#818cf8' }}>{shifts.length}</strong> شیفت)
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShiftPage((p) => Math.max(p - 1, 1))}
+                  disabled={shiftPage === 1}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.4rem 0.8rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: shiftPage === 1 ? '#475569' : '#f8fafc',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: shiftPage === 1 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <ChevronRight size={16} />
+                  <span>قبلی</span>
+                </button>
+
+                {Array.from({ length: totalShiftPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalShiftPages || Math.abs(p - shiftPage) <= 2)
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    return (
+                      <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {prev && p - prev > 1 && (
+                          <span style={{ color: '#64748b', fontSize: '0.8rem' }}>...</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShiftPage(p)}
+                          style={{
+                            padding: '0.4rem 0.75rem',
+                            borderRadius: '8px',
+                            border: p === shiftPage ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                            background: p === shiftPage ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                            color: p === shiftPage ? '#818cf8' : '#f8fafc',
+                            fontSize: '0.825rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                <button
+                  type="button"
+                  onClick={() => setShiftPage((p) => Math.min(p + 1, totalShiftPages))}
+                  disabled={shiftPage === totalShiftPages}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.4rem 0.8rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: shiftPage === totalShiftPages ? '#475569' : '#f8fafc',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    cursor: shiftPage === totalShiftPages ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <span>بعدی</span>
+                  <ChevronLeft size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+
+    {/* Footer */}
+    <Footer />
 
       {/* Modal: View Full Shift Details */}
       {showDetailsModal && selectedShiftDetails && createPortal(

@@ -11,6 +11,7 @@
   ],
   "win": {
     "executableName": "GerenFoodAccounting",
+    "icon": "build/icon.ico",
     "target": ["nsis"],
     "forceCodeSigning": false,
     "signAndEditExecutable": false
@@ -25,6 +26,6 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "سیستم حسابداری گرن"
+    "shortcutName": "GerenFoodAccounting"
   }
 }

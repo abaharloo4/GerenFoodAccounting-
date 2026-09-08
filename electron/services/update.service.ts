@@ -100,12 +100,13 @@ function fetchJsonWithRedirect(url: string, headers: Record<string, string> = {}
  */
 export async function checkForUpdates(customCurrentVersion?: string): Promise<{ success: boolean; updateInfo?: UpdateInfo; error?: string }> {
   try {
+    // Determine current version dynamically — never hardcode a fallback
     let currentVersion = customCurrentVersion;
     if (!currentVersion) {
       try {
-        currentVersion = app && typeof app.getVersion === 'function' ? app.getVersion() : '1.0.3';
+        currentVersion = app && typeof app.getVersion === 'function' ? app.getVersion() : '0.0.0';
       } catch {
-        currentVersion = '1.0.3';
+        currentVersion = '0.0.0';
       }
     }
 
@@ -118,8 +119,8 @@ export async function checkForUpdates(customCurrentVersion?: string): Promise<{ 
       return {
         success: true,
         updateInfo: {
-          currentVersion: currentVersion || '1.0.3',
-          latestVersion: currentVersion || '1.0.3',
+          currentVersion,
+          latestVersion: currentVersion,
           hasUpdate: false,
           releaseNotes: 'هنوز هیچ نسخه‌ای (Release) در مخزن گیتهاب منتشر نشده است.',
           releasePageUrl: `${GITHUB_REPO_URL}/releases`,
@@ -129,7 +130,7 @@ export async function checkForUpdates(customCurrentVersion?: string): Promise<{ 
 
     const rawTag = release.tag_name || '';
     const latestVersion = rawTag.replace(/^v/i, '').trim();
-    const isNewer = compareVersions(latestVersion, currentVersion || '1.0.3') > 0;
+    const isNewer = compareVersions(latestVersion, currentVersion) > 0;
 
     // Search for executable asset in release assets
     let targetAsset = (release.assets || []).find((a: any) =>
@@ -145,7 +146,7 @@ export async function checkForUpdates(customCurrentVersion?: string): Promise<{ 
     const assetSize = targetAsset ? targetAsset.size : undefined;
 
     const updateInfo: UpdateInfo = {
-      currentVersion: currentVersion || '1.0.3',
+      currentVersion,
       latestVersion,
       hasUpdate: isNewer,
       releaseName: release.name || release.tag_name,
@@ -160,7 +161,12 @@ export async function checkForUpdates(customCurrentVersion?: string): Promise<{ 
     return { success: true, updateInfo };
   } catch (err: any) {
     console.error('checkForUpdates error:', err);
-    return { success: false, error: err.message || 'خطا در ارتباط با سرور گیتهاب' };
+    // Better error messages for common scenarios
+    const errorMsg = err.message || 'خطا در ارتباط با سرور گیتهاب';
+    if (errorMsg.includes('403')) {
+      return { success: false, error: 'محدودیت نرخ درخواست گیتهاب (Rate Limit). لطفاً چند دقیقه بعد مجدداً تلاش نمایید.' };
+    }
+    return { success: false, error: errorMsg };
   }
 }
 

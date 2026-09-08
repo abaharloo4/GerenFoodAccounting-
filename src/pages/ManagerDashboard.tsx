@@ -10,6 +10,7 @@ import SystemConfirmModal from '../components/SystemConfirmModal';
 import { apiBridge } from '../services/apiBridge';
 import { formatToShamsiDateTime } from '../utils/dateUtils';
 import { ShamsiDatePickerInput } from '../components/ShamsiDatePickerModal';
+import Footer from '../components/Footer';
 import {
   Users,
   UserPlus,
@@ -85,6 +86,19 @@ export default function ManagerDashboard() {
   const [filterShiftType, setFilterShiftType] = useState<'all' | 'morning' | 'evening'>('all');
   const [filterAccountantId, setFilterAccountantId] = useState<number | undefined>(undefined);
 
+  // Shifts Monitoring Pagination State
+  const [shiftPage, setShiftPage] = useState<number>(1);
+  const SHIFTS_PER_PAGE = 10;
+
+  const totalShiftPages = useMemo(() => {
+    return Math.ceil(shifts.length / SHIFTS_PER_PAGE) || 1;
+  }, [shifts]);
+
+  const paginatedShifts = useMemo(() => {
+    const start = (shiftPage - 1) * SHIFTS_PER_PAGE;
+    return shifts.slice(start, start + SHIFTS_PER_PAGE);
+  }, [shifts, shiftPage]);
+
   // Shift details modal state
   const [selectedShiftDetails, setSelectedShiftDetails] = useState<ShiftFullRecord | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -148,7 +162,7 @@ export default function ManagerDashboard() {
   const [dbTestMessage, setDbTestMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // GitHub Auto-Update state
-  const [currentAppVersion, setCurrentAppVersion] = useState<string>('1.0.3');
+  const [currentAppVersion, setCurrentAppVersion] = useState<string>('...');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const [isDownloadingUpdate, setIsDownloadingUpdate] = useState<boolean>(false);
@@ -184,6 +198,7 @@ export default function ManagerDashboard() {
 
   const fetchShifts = async () => {
     setIsLoadingShifts(true);
+    setShiftPage(1);
     const res = await apiBridge.getShiftsReport({
       startDateShamsi: filterStartDate || undefined,
       endDateShamsi: filterEndDate || undefined,
@@ -567,8 +582,29 @@ export default function ManagerDashboard() {
   };
 
   const totalSalesOverall = shifts.reduce((acc, s) => acc + s.system_sales, 0);
-  const totalShortageOverall = shifts.reduce((acc, s) => acc + (s.unknown_remainder < 0 ? Math.abs(s.unknown_remainder) : 0), 0);
-  const totalSurplusOverall = shifts.reduce((acc, s) => acc + (s.unknown_remainder > 0 ? s.unknown_remainder : 0), 0);
+  
+  const totalCashOverall = shifts.reduce((acc, s) => acc + s.cash_amount, 0);
+  const totalPosOverall = shifts.reduce((acc, s) => acc + s.total_pos, 0);
+  const totalCreditOverall = shifts.reduce((acc, s) => acc + s.total_credit, 0);
+  const totalCardToCardOverall = shifts.reduce((acc, s) => acc + s.total_card_to_card, 0);
+  const totalKnownShortageOverall = shifts.reduce((acc, s) => acc + s.total_known_shortage, 0);
+  const totalKnownSurplusOverall = shifts.reduce((acc, s) => acc + s.total_known_surplus, 0);
+
+  const accountantStats = useMemo(() => {
+    const activeAccountants = users.filter(u => u.role === 'accountant' && u.is_active === 1);
+    return activeAccountants.map(acc => {
+      const accShifts = shifts.filter(s => s.accountant_id === acc.id);
+      return {
+        id: acc.id,
+        name: acc.full_name,
+        shiftCount: accShifts.length,
+        totalSystemSales: accShifts.reduce((sum, s) => sum + s.system_sales, 0),
+        totalShortage: accShifts.reduce((sum, s) => sum + (s.unknown_remainder < 0 ? Math.abs(s.unknown_remainder) : 0), 0),
+        totalSurplus: accShifts.reduce((sum, s) => sum + (s.unknown_remainder > 0 ? s.unknown_remainder : 0), 0),
+      };
+    });
+  }, [users, shifts]);
+
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
@@ -674,7 +710,7 @@ export default function ManagerDashboard() {
               }}
             >
               <FileSpreadsheet size={16} />
-              <span>خروجی Excel</span>
+              <span>گزارشها و آمار</span>
             </button>
 
             <button
@@ -882,7 +918,8 @@ export default function ManagerDashboard() {
                 هیچ شیفتی متناظر با فیلترهای انتخابی یافت نشد.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <>
+                <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', color: '#94a3b8', fontSize: '0.825rem' }}>
@@ -899,7 +936,7 @@ export default function ManagerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {shifts.map((s) => {
+                    {paginatedShifts.map((s) => {
                       const isShortage = s.unknown_remainder < 0;
                       const isSurplus = s.unknown_remainder > 0;
                       return (
@@ -1030,10 +1067,104 @@ export default function ManagerDashboard() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
+
+              {/* Shifts Monitoring Pagination Controls */}
+              {totalShiftPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '1.25rem',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                }}>
+                  <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                    صفحه <strong style={{ color: '#f8fafc' }}>{shiftPage}</strong> از <strong style={{ color: '#f8fafc' }}>{totalShiftPages}</strong> (مجموع <strong style={{ color: '#818cf8' }}>{shifts.length}</strong> شیفت)
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShiftPage((p) => Math.max(p - 1, 1))}
+                      disabled={shiftPage === 1}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.4rem 0.8rem',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        color: shiftPage === 1 ? '#475569' : '#f8fafc',
+                        fontSize: '0.825rem',
+                        fontWeight: 600,
+                        cursor: shiftPage === 1 ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <ChevronRight size={16} />
+                      <span>قبلی</span>
+                    </button>
+
+                    {Array.from({ length: totalShiftPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalShiftPages || Math.abs(p - shiftPage) <= 2)
+                      .map((p, idx, arr) => {
+                        const prev = arr[idx - 1];
+                        return (
+                          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            {prev && p - prev > 1 && (
+                              <span style={{ color: '#64748b', fontSize: '0.8rem' }}>...</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setShiftPage(p)}
+                              style={{
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: '8px',
+                                border: p === shiftPage ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                                background: p === shiftPage ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                                color: p === shiftPage ? '#818cf8' : '#f8fafc',
+                                fontSize: '0.825rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {p}
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                    <button
+                      type="button"
+                      onClick={() => setShiftPage((p) => Math.min(p + 1, totalShiftPages))}
+                      disabled={shiftPage === totalShiftPages}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: '0.4rem 0.8rem',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        color: shiftPage === totalShiftPages ? '#475569' : '#f8fafc',
+                        fontSize: '0.825rem',
+                        fontWeight: 600,
+                        cursor: shiftPage === totalShiftPages ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <span>بعدی</span>
+                      <ChevronLeft size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
+    )}
 
       {/* TAB 2: ACCOUNTANTS MANAGEMENT */}
       {activeTab === 'users' && (
@@ -1192,68 +1323,131 @@ export default function ManagerDashboard() {
 
       {/* TAB 3: REPORTS & EXCEL EXPORT */}
       {activeTab === 'reports' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Summary Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Section 1: Accountant Stats */}
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Users size={20} color="#818cf8" />
+              آمار حسابداران
+              <span style={{ fontSize: '0.85rem', background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', padding: '0.2rem 0.6rem', borderRadius: '20px', marginRight: '0.5rem' }}>
+                تعداد فعال: {accountantStats.length} نفر
+              </span>
+            </h2>
             <div style={{
               background: 'rgba(30, 41, 59, 0.6)',
               backdropFilter: 'blur(16px)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '18px',
-              padding: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
+              borderRadius: '20px',
+              padding: '1rem',
+              overflowX: 'auto'
             }}>
-              <div style={{ padding: '0.85rem', borderRadius: '14px', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
-                <Scale size={28} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>مجموع کل فروش سیستم</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f8fafc' }}>
-                  {formatCurrency(totalSalesOverall)} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>ریال</span>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'right', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    <th style={{ padding: '0.75rem', fontWeight: 600 }}>نام حسابدار</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600 }}>تعداد شیفت‌ها</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600 }}>فروش سیستم (ریال)</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600 }}>کسری ناشناخته (ریال)</th>
+                    <th style={{ padding: '0.75rem', fontWeight: 600 }}>اضافی ناشناخته (ریال)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountantStats.map((acc, idx) => (
+                    <tr key={acc.id} style={{ borderBottom: idx === accountantStats.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      <td style={{ padding: '0.75rem', color: '#f8fafc', fontWeight: 600 }}>{acc.name}</td>
+                      <td style={{ padding: '0.75rem', color: '#cbd5e1' }}>{acc.shiftCount}</td>
+                      <td style={{ padding: '0.75rem', color: '#cbd5e1' }}>{formatCurrency(acc.totalSystemSales)}</td>
+                      <td style={{ padding: '0.75rem', color: '#f87171' }}>{formatCurrency(acc.totalShortage)}</td>
+                      <td style={{ padding: '0.75rem', color: '#34d399' }}>{formatCurrency(acc.totalSurplus)}</td>
+                    </tr>
+                  ))}
+                  {accountantStats.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                        حسابدار فعالی یافت نشد.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section 2: Overall Financial Stats */}
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BarChart3 size={20} color="#10b981" />
+              آمارگیری کلی مالی
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
+                  <Scale size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>فروش سیستم</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalSalesOverall)}</div>
                 </div>
               </div>
-            </div>
 
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.6)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(239, 68, 68, 0.15)',
-              borderRadius: '18px',
-              padding: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-            }}>
-              <div style={{ padding: '0.85rem', borderRadius: '14px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-                <TrendingDown size={28} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>مجموع کسری‌های ناشناخته</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f87171' }}>
-                  {formatCurrency(totalShortageOverall)} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>ریال</span>
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                  <Scale size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>نقدها</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalCashOverall)}</div>
                 </div>
               </div>
-            </div>
 
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.6)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(16, 185, 129, 0.15)',
-              borderRadius: '18px',
-              padding: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-            }}>
-              <div style={{ padding: '0.85rem', borderRadius: '14px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-                <TrendingUp size={28} />
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                  <Scale size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>کارت به کارت‌ها</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalCardToCardOverall)}</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.3rem' }}>مجموع اضافه‌های ناشناخته</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34d399' }}>
-                  {formatCurrency(totalSurplusOverall)} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>ریال</span>
+
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+                  <Scale size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>اعتباری‌ها</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalCreditOverall)}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
+                  <TrendingDown size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>کسری‌های شناخته‌شده</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalKnownShortageOverall)}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>اضافات شناخته‌شده</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalKnownSurplusOverall)}</div>
+                </div>
+              </div>
+              
+              <div style={{ background: 'rgba(30, 41, 59, 0.6)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '18px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+                  <Scale size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>فروش کارتخوان</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(totalPosOverall)}</div>
                 </div>
               </div>
             </div>
@@ -2854,16 +3048,7 @@ export default function ManagerDashboard() {
       )}
 
       {/* Footer */}
-      <footer style={{
-        marginTop: '3rem',
-        paddingTop: '1.5rem',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        textAlign: 'center',
-        color: '#64748b',
-        fontSize: '0.8rem',
-      }}>
-        سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه {currentAppVersion}
-      </footer>
+      <Footer />
 
       {/* System Confirm Modal */}
       <SystemConfirmModal

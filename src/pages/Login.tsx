@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Coffee, Phone, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Phone, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import Footer from '../components/Footer';
 
 export default function Login() {
   const { login } = useAuth();
@@ -60,14 +61,19 @@ export default function Login() {
             width: '64px',
             height: '64px',
             borderRadius: '18px',
-            background: 'linear-gradient(135deg, #9b152e 0%, #6e0f22 100%)',
+            background: 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.25rem auto',
-            boxShadow: '0 10px 25px -5px rgba(155, 21, 46, 0.5)',
+            boxShadow: '0 10px 25px -5px rgba(49, 46, 129, 0.5)',
+            border: '2px solid rgba(99, 102, 241, 0.4)',
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: '2rem',
+            fontFamily: 'Segoe UI, sans-serif',
           }}>
-            <Coffee size={32} color="#ffffff" />
+            G
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fcf8f8', marginBottom: '0.3rem' }}>
             سیستم حسابداری گرن
@@ -207,9 +213,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.775rem', color: '#64748b' }}>
-          سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه 1.0.3
-        </div>
+        <Footer style={{ marginTop: '2rem', borderTop: 'none', paddingTop: 0, paddingBottom: 0, fontSize: '0.775rem' }} />
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { apiBridge } from '../services/apiBridge';
 
 import { getTodayShamsi } from '../utils/dateUtils';
 import { ShamsiDatePickerInput } from '../components/ShamsiDatePickerModal';
+import Footer from '../components/Footer';
 
 interface ShiftEntryFormProps {
   onBack?: () => void;
@@ -678,16 +679,7 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
       )}
 
       {/* Footer */}
-      <footer style={{
-        marginTop: '3rem',
-        paddingTop: '1.5rem',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        textAlign: 'center',
-        color: '#64748b',
-        fontSize: '0.8rem',
-      }}>
-        سیستم حسابداری کافه گرن — طراحی و توسعه توسط امیرمحمد بهارلو | شماره پشتیبانی: 09384857722 — نسخه برنامه 1.0.3
-      </footer>
+      <Footer />
     </div>
   );
 }

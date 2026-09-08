@@ -72,6 +72,90 @@ export function getLoadedDbConfig(): Required<DbConfig> {
   return loadSavedDbConfig();
 }
 
+interface Migration {
+  version: number;
+  description: string;
+  up: (pool: mysql.Pool) => Promise<void>;
+}
+
+const migrations: Migration[] = [
+  {
+    version: 1,
+    description: 'Ensure card_to_card_entries table exists',
+    up: async (pool) => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS card_to_card_entries (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          shift_id INT NOT NULL,
+          description VARCHAR(255) NOT NULL,
+          amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+          FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+    },
+  },
+  {
+    version: 2,
+    description: 'Ensure notes column exists in shifts table',
+    up: async (pool) => {
+      try {
+        await pool.query(`ALTER TABLE shifts ADD COLUMN notes TEXT`);
+      } catch {
+        // Ignore if column already exists
+      }
+    },
+  },
+  {
+    version: 3,
+    description: 'Ensure shift_assignment column exists in users table',
+    up: async (pool) => {
+      try {
+        await pool.query(`ALTER TABLE users ADD COLUMN shift_assignment ENUM('morning', 'evening', 'both') NOT NULL DEFAULT 'both'`);
+      } catch {
+        // Ignore if column already exists
+      }
+    },
+  },
+  {
+    version: 4,
+    description: 'Ensure shift_assignment is set to both for all users',
+    up: async (pool) => {
+      try {
+        await pool.query(`UPDATE users SET shift_assignment = 'both'`);
+      } catch {
+        // Ignore if fails
+      }
+    },
+  },
+];
+
+async function runMigrations(pool: mysql.Pool) {
+  // Create schema_migrations table if not exists
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INT PRIMARY KEY,
+      description VARCHAR(255) NOT NULL,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `);
+
+  // Get applied migrations
+  const [rows]: any = await pool.query('SELECT version FROM schema_migrations');
+  const appliedVersions = new Set(rows.map((r: any) => r.version));
+
+  // Run pending migrations
+  for (const migration of migrations) {
+    if (!appliedVersions.has(migration.version)) {
+      console.log(`Running migration ${migration.version}: ${migration.description}`);
+      await migration.up(pool);
+      await pool.query(
+        'INSERT INTO schema_migrations (version, description) VALUES (?, ?)',
+        [migration.version, migration.description]
+      );
+    }
+  }
+}
+
 export async function initDatabase(config: DbConfig = {}): Promise<mysql.Pool> {
   const savedCfg = loadSavedDbConfig();
   const cfg = { ...savedCfg, ...config };
@@ -218,6 +302,9 @@ export async function initDatabase(config: DbConfig = {}): Promise<mysql.Pool> {
     await pool.query(query);
   }
 
+  // Run migrations
+  await runMigrations(pool);
+
   // 4. Ensure at least one Manager exists — only if no manager exists at all in the database
   const [managerRows]: any = await pool.query(`SELECT id FROM users WHERE role = 'manager' LIMIT 1`);
   if (!managerRows || managerRows.length === 0) {
@@ -227,20 +314,6 @@ export async function initDatabase(config: DbConfig = {}): Promise<mysql.Pool> {
        VALUES ('09335760392', ?, 'مدیر سیستم', 'manager', 'both', 1)`,
       [defaultPasswordHash]
     );
-  }
-
-  // 5. Ensure all existing accountants have shift_assignment = 'both' (no static shift lock)
-  try {
-    await pool.query(`UPDATE users SET shift_assignment = 'both'`);
-  } catch {
-    // Ignore if fails
-  }
-
-  // 6. Ensure notes column exists in shifts table
-  try {
-    await pool.query(`ALTER TABLE shifts ADD COLUMN notes TEXT`);
-  } catch {
-    // Ignore if column already exists
   }
 
   return pool;
