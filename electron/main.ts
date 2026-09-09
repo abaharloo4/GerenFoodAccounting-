@@ -1,7 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +67,26 @@ function createWindow() {
     },
   });
 
+  // Prevent new windows from opening inside Electron; redirect external URLs to default OS browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  // Prevent unauthorized in-window navigation
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const isAllowed =
+      url.startsWith('http://localhost') ||
+      url.startsWith('http://127.0.0.1') ||
+      url.startsWith('file://');
+    if (!isAllowed) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
@@ -83,11 +105,13 @@ app.whenReady().then(async () => {
     console.error('Failed to initialize database:', err);
   }
 
-  // Start HTTP API fallback server for browser preview
-  try {
-    startHttpServer();
-  } catch (httpErr) {
-    console.error('Failed to start HTTP server:', httpErr);
+  // Start HTTP API fallback server ONLY in dev mode for browser preview
+  if (isDev) {
+    try {
+      startHttpServer();
+    } catch (httpErr) {
+      console.error('Failed to start HTTP server:', httpErr);
+    }
   }
 
   // Setup IPC Handlers

@@ -589,14 +589,13 @@ export default function ManagerDashboard() {
     return Math.abs(val).toLocaleString('fa-IR');
   };
 
-  const totalSalesOverall = shifts.reduce((acc, s) => acc + s.system_sales, 0);
-  
-  const totalCashOverall = shifts.reduce((acc, s) => acc + s.cash_amount, 0);
-  const totalPosOverall = shifts.reduce((acc, s) => acc + s.total_pos, 0);
-  const totalCreditOverall = shifts.reduce((acc, s) => acc + s.total_credit, 0);
-  const totalCardToCardOverall = shifts.reduce((acc, s) => acc + s.total_card_to_card, 0);
-  const totalKnownShortageOverall = shifts.reduce((acc, s) => acc + s.total_known_shortage, 0);
-  const totalKnownSurplusOverall = shifts.reduce((acc, s) => acc + s.total_known_surplus, 0);
+  const totalSalesOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.system_sales, 0), [shifts]);
+  const totalCashOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.cash_amount, 0), [shifts]);
+  const totalPosOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.total_pos, 0), [shifts]);
+  const totalCreditOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.total_credit, 0), [shifts]);
+  const totalCardToCardOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.total_card_to_card, 0), [shifts]);
+  const totalKnownShortageOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.total_known_shortage, 0), [shifts]);
+  const totalKnownSurplusOverall = useMemo(() => shifts.reduce((acc, s) => acc + s.total_known_surplus, 0), [shifts]);
 
   const accountantStats = useMemo(() => {
     const activeAccountants = users.filter(u => u.role === 'accountant' && u.is_active === 1);

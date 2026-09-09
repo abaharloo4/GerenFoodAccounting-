@@ -37,17 +37,50 @@ function getConfigFilePath(): string {
   return path.join(userDataDir, 'db_config.json');
 }
 
+function encryptSecret(plainText: string): string | null {
+  try {
+    const electron = require('electron');
+    if (electron && electron.safeStorage && electron.safeStorage.isEncryptionAvailable()) {
+      const buffer = electron.safeStorage.encryptString(plainText);
+      return buffer.toString('hex');
+    }
+  } catch {
+    // Ignore outside Electron or if safeStorage unavailable
+  }
+  return null;
+}
+
+function decryptSecret(encryptedHex: string): string | null {
+  try {
+    const electron = require('electron');
+    if (electron && electron.safeStorage && electron.safeStorage.isEncryptionAvailable()) {
+      const buffer = Buffer.from(encryptedHex, 'hex');
+      return electron.safeStorage.decryptString(buffer);
+    }
+  } catch {
+    // Ignore outside Electron or on decryption error
+  }
+  return null;
+}
+
 export function loadSavedDbConfig(): Required<DbConfig> {
   try {
     const filePath = getConfigFilePath();
     if (fs.existsSync(filePath)) {
       const content = fs.readFileSync(filePath, 'utf8');
       const parsed = JSON.parse(content);
+      let password = parsed.password ?? '';
+      if (parsed.password_encrypted) {
+        const decrypted = decryptSecret(parsed.password_encrypted);
+        if (decrypted !== null) {
+          password = decrypted;
+        }
+      }
       currentConfig = {
         host: parsed.host || 'localhost',
         port: Number(parsed.port) || 3306,
         user: parsed.user ?? 'root',
-        password: parsed.password ?? '',
+        password,
         database: parsed.database || 'cafe_cash_db',
       };
     }
@@ -61,7 +94,13 @@ export function saveDbConfigFile(config: DbConfig): void {
   try {
     const filePath = getConfigFilePath();
     const merged = { ...loadSavedDbConfig(), ...config };
-    fs.writeFileSync(filePath, JSON.stringify(merged, null, 2), 'utf8');
+    const toSave: any = { ...merged };
+    const encrypted = encryptSecret(merged.password || '');
+    if (encrypted) {
+      toSave.password_encrypted = encrypted;
+      delete toSave.password; // Do not store plaintext password on disk
+    }
+    fs.writeFileSync(filePath, JSON.stringify(toSave, null, 2), 'utf8');
     currentConfig = merged;
   } catch (err) {
     console.error('Error writing DB config file:', err);
@@ -124,6 +163,28 @@ const migrations: Migration[] = [
         await pool.query(`UPDATE users SET shift_assignment = 'both'`);
       } catch {
         // Ignore if fails
+      }
+    },
+  },
+  {
+    version: 5,
+    description: 'Add performance indexes to shifts and related entry tables',
+    up: async (pool) => {
+      const indexQueries = [
+        'CREATE INDEX idx_shifts_date ON shifts (shift_date_shamsi)',
+        'CREATE INDEX idx_shifts_accountant ON shifts (accountant_id)',
+        'CREATE INDEX idx_pos_shift_id ON pos_entries (shift_id)',
+        'CREATE INDEX idx_credit_shift_id ON credit_entries (shift_id)',
+        'CREATE INDEX idx_card_shift_id ON card_to_card_entries (shift_id)',
+        'CREATE INDEX idx_shortage_shift_id ON shortage_entries (shift_id)',
+        'CREATE INDEX idx_surplus_shift_id ON surplus_entries (shift_id)',
+      ];
+      for (const query of indexQueries) {
+        try {
+          await pool.query(query);
+        } catch {
+          // Ignore if index already exists (duplicate key error)
+        }
       }
     },
   },

@@ -19,10 +19,31 @@ import { getLoadedDbConfig, testAndUpdateDbConfig } from './db/index';
 
 const PORT = 3001;
 
-function enableCORS(res: http.ServerResponse) {
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]);
+
+function handleCORS(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+  const origin = req.headers.origin;
+  if (origin) {
+    if (ALLOWED_ORIGINS.has(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Vary', 'Origin');
+      return true;
+    }
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: 'Cross-Origin Forbidden' }));
+    return false;
+  }
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return true;
 }
 
 function parseJsonBody(req: http.IncomingMessage): Promise<any> {
@@ -44,7 +65,9 @@ function parseJsonBody(req: http.IncomingMessage): Promise<any> {
 
 export function startHttpServer() {
   const server = http.createServer(async (req, res) => {
-    enableCORS(res);
+    if (!handleCORS(req, res)) {
+      return;
+    }
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);

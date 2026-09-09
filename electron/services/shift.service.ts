@@ -220,8 +220,11 @@ export async function saveShift(input: ShiftSaveInput): Promise<{ success: boole
       return { success: false, error: 'کاربر وارد نشده است. لطفاً دوباره وارد شوید.' };
     }
 
-    const assignedAccountantId = input.accountant_id || currentUser.id;
-    const targetAccountantId = assignedAccountantId;
+    // Role-based target assignment: Accountants can only save for themselves
+    const targetAccountantId = currentUser.role === 'manager' && input.accountant_id
+      ? input.accountant_id
+      : currentUser.id;
+    const assignedAccountantId = targetAccountantId;
     const dbPool = getDb();
 
     // Check if shift is already taken by another accountant for this date and shift_type
@@ -400,15 +403,57 @@ export async function getAccountantShifts(accountantId: number): Promise<{ succe
     }
 
     const shifts: AccountantShiftRecord[] = [];
+    const shiftIds: number[] = rows.map((r: any) => Number(r.id));
+    const placeholders = shiftIds.map(() => '?').join(',');
+
+    const [allPosRows]: any = await db.query(
+      `SELECT shift_id, amount FROM pos_entries WHERE shift_id IN (${placeholders})`,
+      shiftIds
+    );
+    const [allCreditRows]: any = await db.query(
+      `SELECT shift_id, amount FROM credit_entries WHERE shift_id IN (${placeholders})`,
+      shiftIds
+    );
+    const [allCardToCardRows]: any = await db.query(
+      `SELECT shift_id, amount FROM card_to_card_entries WHERE shift_id IN (${placeholders})`,
+      shiftIds
+    );
+    const [allShortageRows]: any = await db.query(
+      `SELECT shift_id, amount FROM shortage_entries WHERE shift_id IN (${placeholders})`,
+      shiftIds
+    );
+    const [allSurplusRows]: any = await db.query(
+      `SELECT shift_id, amount FROM surplus_entries WHERE shift_id IN (${placeholders})`,
+      shiftIds
+    );
+
+    const posByShift = new Map<number, any[]>();
+    const creditByShift = new Map<number, any[]>();
+    const cardToCardByShift = new Map<number, any[]>();
+    const shortageByShift = new Map<number, any[]>();
+    const surplusByShift = new Map<number, any[]>();
+
+    for (const id of shiftIds) {
+      posByShift.set(id, []);
+      creditByShift.set(id, []);
+      cardToCardByShift.set(id, []);
+      shortageByShift.set(id, []);
+      surplusByShift.set(id, []);
+    }
+
+    for (const r of allPosRows || []) posByShift.get(r.shift_id)?.push(r);
+    for (const r of allCreditRows || []) creditByShift.get(r.shift_id)?.push(r);
+    for (const r of allCardToCardRows || []) cardToCardByShift.get(r.shift_id)?.push(r);
+    for (const r of allShortageRows || []) shortageByShift.get(r.shift_id)?.push(r);
+    for (const r of allSurplusRows || []) surplusByShift.get(r.shift_id)?.push(r);
 
     for (const row of rows) {
       const shiftId = row.id;
-
-      const [posRows]: any = await db.execute(`SELECT amount FROM pos_entries WHERE shift_id = ?`, [shiftId]);
-      const [creditRows]: any = await db.execute(`SELECT amount FROM credit_entries WHERE shift_id = ?`, [shiftId]);
-      const [cardToCardRows]: any = await db.execute(`SELECT amount FROM card_to_card_entries WHERE shift_id = ?`, [shiftId]);
-      const [shortageRows]: any = await db.execute(`SELECT amount FROM shortage_entries WHERE shift_id = ?`, [shiftId]);
-      const [surplusRows]: any = await db.execute(`SELECT amount FROM surplus_entries WHERE shift_id = ?`, [shiftId]);
+      const posRows = posByShift.get(shiftId) || [];
+      const creditRows = creditByShift.get(shiftId) || [];
+      const cardToCardRows = cardToCardByShift.get(shiftId) || [];
+      const shortageRows = shortageByShift.get(shiftId) || [];
+      const surplusRows = surplusByShift.get(shiftId) || [];
 
       const calc = calculateShiftReconciliation({
         systemSales: Number(row.system_sales),

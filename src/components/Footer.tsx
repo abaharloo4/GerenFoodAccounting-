@@ -6,7 +6,7 @@ interface FooterProps {
 }
 
 export default function Footer({ style }: FooterProps) {
-  const [version, setVersion] = useState<string>('1.0.7');
+  const [version, setVersion] = useState<string>('1.0.8');
 
   useEffect(() => {
     apiBridge.getAppVersion().then((v) => {
