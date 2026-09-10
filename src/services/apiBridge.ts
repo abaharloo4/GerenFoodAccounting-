@@ -1,7 +1,7 @@
 import type { ElectronAPI } from '../../electron/preload';
 import type { DbConfig } from '../../electron/db/index';
 
-const HTTP_BASE = 'http://localhost:3001/api';
+const HTTP_BASE = 'http://127.0.0.1:3001/api';
 
 async function httpFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {

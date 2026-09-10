@@ -312,7 +312,15 @@ export function startHttpServer() {
     }
   });
 
-  server.listen(PORT, '127.0.0.1', () => {
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`[HTTP Server] Port ${PORT} already in use; reusing existing instance.`);
+    } else {
+      console.error('[HTTP Server] Server error:', err);
+    }
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`[HTTP Server] Running on http://127.0.0.1:${PORT}/api for browser/Vite fallback.`);
   });
 }

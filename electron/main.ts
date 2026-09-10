@@ -35,9 +35,12 @@ app.name = 'GerenFoodAccounting';
 // Prevent Chromium shader disk cache locking error on Windows
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.quit();
+// Only enforce single instance lock in production packaged app
+if (!isDev) {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.quit();
+  }
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -113,13 +116,11 @@ app.whenReady().then(async () => {
     console.error('Failed to initialize database:', err);
   }
 
-  // Start HTTP API fallback server ONLY in dev mode for browser preview
-  if (isDev) {
-    try {
-      startHttpServer();
-    } catch (httpErr) {
-      console.error('Failed to start HTTP server:', httpErr);
-    }
+  // Start HTTP API fallback server for browser preview and fallback
+  try {
+    startHttpServer();
+  } catch (httpErr) {
+    console.error('Failed to start HTTP server:', httpErr);
   }
 
   // Setup IPC Handlers
