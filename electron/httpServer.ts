@@ -19,20 +19,28 @@ import { getLoadedDbConfig, testAndUpdateDbConfig } from './db/index';
 
 const PORT = 3001;
 
-const ALLOWED_ORIGINS = new Set([
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-]);
+function isLocalOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '::1' ||
+      url.hostname === '[::1]'
+    );
+  } catch {
+    return false;
+  }
+}
 
 function handleCORS(req: http.IncomingMessage, res: http.ServerResponse): boolean {
   const origin = req.headers.origin;
   if (origin) {
-    if (ALLOWED_ORIGINS.has(origin)) {
+    if (isLocalOrigin(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Max-Age', '86400');
       res.setHeader('Vary', 'Origin');
       return true;
     }
@@ -42,7 +50,7 @@ function handleCORS(req: http.IncomingMessage, res: http.ServerResponse): boolea
   }
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', '*');
   return true;
 }
 

@@ -4,12 +4,17 @@ import type { DbConfig } from '../../electron/db/index';
 const HTTP_BASE = 'http://localhost:3001/api';
 
 async function httpFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${HTTP_BASE}${endpoint}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  return res.json();
+  try {
+    const url = `${HTTP_BASE}${endpoint}`;
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error(`[httpFetch error] ${endpoint}:`, err);
+    return { success: false, error: `خطا در ارتباط با سرور داخلی (${err.message || 'اتصال برقرار نشد'})` } as T;
+  }
 }
 
 export const apiBridge: ElectronAPI = {

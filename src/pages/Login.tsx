@@ -30,8 +30,9 @@ export default function Login() {
       if (!res.success) {
         setError(res.error || 'خطا در ورود به سیستم');
       }
-    } catch {
-      setError('خطایی در ارتباط با برنامه رخ داد');
+    } catch (err: any) {
+      console.error('Login exception:', err);
+      setError(err?.message ? `خطا در برقراری ارتباط: ${err.message}` : 'خطایی در ارتباط با برنامه رخ داد');
     } finally {
       setIsSubmitting(false);
     }

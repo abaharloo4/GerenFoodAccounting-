@@ -32,6 +32,14 @@ import { createAutoBackup } from './services/backup.service';
 
 app.name = 'GerenFoodAccounting';
 
+// Prevent Chromium shader disk cache locking error on Windows
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function getAppIconPath(): string | undefined {
