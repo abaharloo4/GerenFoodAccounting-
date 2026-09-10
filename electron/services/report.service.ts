@@ -19,7 +19,7 @@ function getAppVersionString(): string {
       return app.getVersion();
     }
   } catch {}
-  return '1.0.8';
+  return '1.0.9';
 }
 
 export interface ShiftReportItem {
