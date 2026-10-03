@@ -19,7 +19,7 @@ function getAppVersionString(): string {
       return app.getVersion();
     }
   } catch {}
-  return '1.0.9';
+  return '1.1.0';
 }
 
 export interface ShiftReportItem {
@@ -428,13 +428,17 @@ export async function exportShiftsToCSV(filters: ShiftReportFilter = {}): Promis
     footerCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
     let targetFilePath = '';
+    const dateRangeSuffix = (filters.startDateShamsi && filters.endDateShamsi)
+      ? `_${filters.startDateShamsi.replace(/\//g, '-')}_تا_${filters.endDateShamsi.replace(/\//g, '-')}`
+      : (filters.startDateShamsi ? `_از_${filters.startDateShamsi.replace(/\//g, '-')}` : (filters.endDateShamsi ? `_تا_${filters.endDateShamsi.replace(/\//g, '-')}` : `_${Date.now()}`));
+    const defaultExcelFileName = `گزارش_جامع_تسویه_صندوق${dateRangeSuffix}.xlsx`;
 
     // Attempt Electron native dialog if available
     try {
       if (dialog && typeof dialog.showSaveDialog === 'function') {
         const saveDialog = await dialog.showSaveDialog({
           title: 'ذخیره گزارش اکسل واقعی (.xlsx)',
-          defaultPath: `گزارش_جامع_تسویه_صندوق_${Date.now()}.xlsx`,
+          defaultPath: defaultExcelFileName,
           filters: [
             { name: 'Excel Workbook (*.xlsx)', extensions: ['xlsx'] },
             { name: 'All Files (*.*)', extensions: ['*'] },
@@ -456,7 +460,7 @@ export async function exportShiftsToCSV(filters: ShiftReportFilter = {}): Promis
       const userHome = process.env.USERPROFILE || process.env.HOME || 'C:\\';
       const desktopDir = path.join(userHome, 'Desktop');
       const targetDir = fs.existsSync(desktopDir) ? desktopDir : userHome;
-      targetFilePath = path.join(targetDir, `گزارش_جامع_تسویه_صندوق_${Date.now()}.xlsx`);
+      targetFilePath = path.join(targetDir, defaultExcelFileName);
     }
 
     await workbook.xlsx.writeFile(targetFilePath);
@@ -670,6 +674,7 @@ export async function exportShiftsToPDF(filters: ShiftReportFilter = {}): Promis
   </div>
   <div class="meta-info">
     <div>تاریخ گزارش: <strong>${exportDateFa}</strong> ساعت <strong>${exportTimeFa}</strong></div>
+    ${filters.startDateShamsi || filters.endDateShamsi ? `<div>بازه زمانی: <strong>${filters.startDateShamsi || 'ابتدا'} تا ${filters.endDateShamsi || 'امروز'}</strong></div>` : '<div>بازه زمانی: <strong>کل دوره</strong></div>'}
     <div>تعداد شیفت‌های گزارش‌شده: <strong>${shifts.length} شیفت</strong></div>
   </div>
 </div>
@@ -746,12 +751,16 @@ export async function exportShiftsToPDF(filters: ShiftReportFilter = {}): Promis
 </html>`;
 
     let targetFilePath = '';
+    const dateRangeSuffix = (filters.startDateShamsi && filters.endDateShamsi)
+      ? `_${filters.startDateShamsi.replace(/\//g, '-')}_تا_${filters.endDateShamsi.replace(/\//g, '-')}`
+      : (filters.startDateShamsi ? `_از_${filters.startDateShamsi.replace(/\//g, '-')}` : (filters.endDateShamsi ? `_تا_${filters.endDateShamsi.replace(/\//g, '-')}` : `_${Date.now()}`));
+    const defaultPdfFileName = `گزارش_جامع_تسویه_صندوق${dateRangeSuffix}.pdf`;
 
     try {
       if (dialog && typeof dialog.showSaveDialog === 'function') {
         const saveDialog = await dialog.showSaveDialog({
           title: 'ذخیره گزارش PDF رسمی',
-          defaultPath: `گزارش_جامع_تسویه_صندوق_${Date.now()}.pdf`,
+          defaultPath: defaultPdfFileName,
           filters: [
             { name: 'PDF Document (*.pdf)', extensions: ['pdf'] },
             { name: 'All Files (*.*)', extensions: ['*'] },
@@ -774,7 +783,7 @@ export async function exportShiftsToPDF(filters: ShiftReportFilter = {}): Promis
       const userHome = process.env.USERPROFILE || process.env.HOME || 'C:\\';
       const desktopDir = path.join(userHome, 'Desktop');
       const targetDir = fs.existsSync(desktopDir) ? desktopDir : userHome;
-      targetFilePath = path.join(targetDir, `گزارش_جامع_تسویه_صندوق_${Date.now()}.pdf`);
+      targetFilePath = path.join(targetDir, defaultPdfFileName);
     }
 
     // Write temp HTML file for Electron printToPDF

@@ -84,3 +84,13 @@ export function getTehranLiveTime(): string {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
   }
 }
+
+/**
+ * Returns Shamsi date for N days ago in Asia/Tehran timezone.
+ */
+export function getDaysAgoShamsi(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return formatToShamsiDate(d);
+}
+

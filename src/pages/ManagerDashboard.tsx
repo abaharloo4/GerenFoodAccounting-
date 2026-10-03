@@ -8,7 +8,7 @@ import { UpdateInfo, DownloadProgress, GITHUB_REPO_URL, GITHUB_OWNER, GITHUB_REP
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import SystemConfirmModal from '../components/SystemConfirmModal';
 import { apiBridge } from '../services/apiBridge';
-import { formatToShamsiDateTime } from '../utils/dateUtils';
+import { formatToShamsiDateTime, getTodayShamsi, getDaysAgoShamsi } from '../utils/dateUtils';
 import { ShamsiDatePickerInput } from '../components/ShamsiDatePickerModal';
 import Footer from '../components/Footer';
 import {
@@ -23,6 +23,7 @@ import {
   RefreshCw,
   FileSpreadsheet,
   FileText,
+  Calendar,
   Lock as LockIcon,
   Filter,
   BarChart3,
@@ -196,19 +197,56 @@ export default function ManagerDashboard() {
     setIsLoadingUsers(false);
   };
 
-  const fetchShifts = async () => {
+  const fetchShifts = async (overrideFilters?: {
+    startDateShamsi?: string;
+    endDateShamsi?: string;
+    shiftType?: 'all' | 'morning' | 'evening';
+    accountantId?: number;
+  }) => {
     setIsLoadingShifts(true);
     setShiftPage(1);
+    const startDate = overrideFilters && 'startDateShamsi' in overrideFilters ? overrideFilters.startDateShamsi : filterStartDate;
+    const endDate = overrideFilters && 'endDateShamsi' in overrideFilters ? overrideFilters.endDateShamsi : filterEndDate;
+    const sType = overrideFilters && 'shiftType' in overrideFilters ? overrideFilters.shiftType : filterShiftType;
+    const accId = overrideFilters && 'accountantId' in overrideFilters ? overrideFilters.accountantId : filterAccountantId;
+
     const res = await apiBridge.getShiftsReport({
-      startDateShamsi: filterStartDate || undefined,
-      endDateShamsi: filterEndDate || undefined,
-      shiftType: filterShiftType,
-      accountantId: filterAccountantId,
+      startDateShamsi: startDate || undefined,
+      endDateShamsi: endDate || undefined,
+      shiftType: sType,
+      accountantId: accId,
     });
     if (res.success && res.shifts) {
       setShifts(res.shifts);
     }
     setIsLoadingShifts(false);
+  };
+
+  const handleApplyPreset = (days: number | 'today' | 'all') => {
+    let start = '';
+    let end = '';
+    if (days === 'today') {
+      const today = getTodayShamsi();
+      start = today;
+      end = today;
+    } else if (typeof days === 'number') {
+      start = getDaysAgoShamsi(days);
+      end = getTodayShamsi();
+    } else if (days === 'all') {
+      start = '';
+      end = '';
+    }
+    setFilterStartDate(start);
+    setFilterEndDate(end);
+    fetchShifts({ startDateShamsi: start, endDateShamsi: end });
+  };
+
+  const handleResetFilters = () => {
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setFilterShiftType('all');
+    setFilterAccountantId(undefined);
+    fetchShifts({ startDateShamsi: '', endDateShamsi: '', shiftType: 'all', accountantId: undefined });
   };
 
   const fetchAuditLogs = async () => {
@@ -886,8 +924,76 @@ export default function ManagerDashboard() {
               </select>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', width: '100%', marginBottom: '0.25rem' }}>
+              <span style={{ fontSize: '0.775rem', color: '#94a3b8' }}>بازه سریع:</span>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('today')}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: (filterStartDate === getTodayShamsi() && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                }}
+              >
+                امروز
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(7)}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: (filterStartDate === getDaysAgoShamsi(7) && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                }}
+              >
+                ۷ روز اخیر
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(30)}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: (filterStartDate === getDaysAgoShamsi(30) && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                }}
+              >
+                ۳۰ روز اخیر
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset('all')}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: (!filterStartDate && !filterEndDate) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                }}
+              >
+                کل دوره
+              </button>
+            </div>
+
             <button
-              onClick={fetchShifts}
+              onClick={() => fetchShifts()}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -906,6 +1012,25 @@ export default function ManagerDashboard() {
               <RefreshCw size={14} />
               <span>اعمال فیلتر</span>
             </button>
+
+            {(filterStartDate || filterEndDate || filterAccountantId || filterShiftType !== 'all') && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                style={{
+                  padding: '0.55rem 0.85rem',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  color: '#f87171',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                حذف فیلترها
+              </button>
+            )}
           </div>
 
           {/* Shifts List Table */}
@@ -1331,7 +1456,205 @@ export default function ManagerDashboard() {
       {/* TAB 3: REPORTS & EXCEL EXPORT */}
       {activeTab === 'reports' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
+
+          {/* Date Range & Filter Bar */}
+          <div style={{
+            background: 'rgba(30, 41, 59, 0.6)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '18px',
+            padding: '1.25rem 1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#818cf8', fontWeight: 700, fontSize: '0.95rem' }}>
+                <Calendar size={20} />
+                <span>تعیین بازه زمانی و فیلترهای گزارش و خروجی</span>
+              </div>
+
+              {/* Quick Presets */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.775rem', color: '#94a3b8' }}>بازه سریع:</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('today')}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.775rem',
+                    fontWeight: 600,
+                    background: (filterStartDate === getTodayShamsi() && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                  }}
+                >
+                  امروز
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset(7)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.775rem',
+                    fontWeight: 600,
+                    background: (filterStartDate === getDaysAgoShamsi(7) && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ۷ روز اخیر
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset(30)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.775rem',
+                    fontWeight: 600,
+                    background: (filterStartDate === getDaysAgoShamsi(30) && filterEndDate === getTodayShamsi()) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ۳۰ روز اخیر
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('all')}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.775rem',
+                    fontWeight: 600,
+                    background: (!filterStartDate && !filterEndDate) ? '#6366f1' : 'rgba(255, 255, 255, 0.07)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8fafc',
+                    cursor: 'pointer',
+                  }}
+                >
+                  کل دوره (همه)
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>از تاریخ:</span>
+                <div style={{ width: '150px' }}>
+                  <ShamsiDatePickerInput
+                    value={filterStartDate}
+                    onChange={setFilterStartDate}
+                    placeholder="از تاریخ..."
+                    title="انتخاب تاریخ شروع بازه گزارش"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>تا تاریخ:</span>
+                <div style={{ width: '150px' }}>
+                  <ShamsiDatePickerInput
+                    value={filterEndDate}
+                    onChange={setFilterEndDate}
+                    placeholder="تا تاریخ..."
+                    title="انتخاب تاریخ پایان بازه گزارش"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>حسابدار:</span>
+                <select
+                  value={filterAccountantId || ''}
+                  onChange={(e) => setFilterAccountantId(e.target.value ? Number(e.target.value) : undefined)}
+                  style={{
+                    padding: '0.5rem 0.8rem',
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#f8fafc',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">همه حسابداران</option>
+                  {users.filter(u => u.role === 'accountant').map(u => (
+                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>نوع شیفت:</span>
+                <select
+                  value={filterShiftType}
+                  onChange={(e) => setFilterShiftType(e.target.value as any)}
+                  style={{
+                    padding: '0.5rem 0.8rem',
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    color: '#f8fafc',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="all">همه شیفت‌ها</option>
+                  <option value="morning">شیفت صبح</option>
+                  <option value="evening">شیفت عصر</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => fetchShifts()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.55rem 1.1rem',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  marginRight: 'auto',
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>اعمال بازه و بروزرسانی</span>
+              </button>
+
+              {(filterStartDate || filterEndDate || filterAccountantId || filterShiftType !== 'all') && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  style={{
+                    padding: '0.55rem 0.9rem',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    borderRadius: '8px',
+                    color: '#f87171',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  حذف فیلترها
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Section 1: Accountant Stats */}
           <div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1492,6 +1815,26 @@ export default function ManagerDashboard() {
             <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: '560px', lineHeight: '1.6' }}>
               می‌توانید گزارش کامل تسویه‌ها، مبالغ سیستم، کارتخوان‌ها، اعتباری‌ها و وضعیت صندوق را بر اساس فیلترهای انتخابی در قالب فایل **Excel** یا فایل **PDF رسمی آماده پرینت** خروجی بگیرید.
             </p>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.5rem 1.25rem',
+              borderRadius: '20px',
+              background: 'rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              color: '#a5b4fc',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            }}>
+              <Calendar size={16} />
+              <span>
+                {filterStartDate || filterEndDate
+                  ? `بازه انتخابی خروجی: از ${filterStartDate || 'ابتدا'} تا ${filterEndDate || 'امروز'} (${shifts.length.toLocaleString('fa-IR')} شیفت)`
+                  : `بازه انتخابی خروجی: کل دوره (${shifts.length.toLocaleString('fa-IR')} شیفت)`}
+              </span>
+            </div>
 
             {exportMessage && (
               <div style={{

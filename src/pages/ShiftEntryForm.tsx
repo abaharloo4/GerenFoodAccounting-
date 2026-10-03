@@ -45,7 +45,7 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
 
   // Lists
   const [posEntries, setPosEntries] = useState<EntryItem[]>([
-    { labelOrDesc: 'پوز اصلی (سامان)', amount: '' },
+    { labelOrDesc: 'پارسیان', amount: '' },
   ]);
   const [creditEntries, setCreditEntries] = useState<EntryItem[]>([]);
   const [cardToCardEntries, setCardToCardEntries] = useState<EntryItem[]>([]);
@@ -82,7 +82,7 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
         setPosEntries(
           Array.isArray(s.pos_entries) && s.pos_entries.length > 0
             ? s.pos_entries.map((p) => ({ labelOrDesc: p.pos_label || '', amount: p.amount ?? '' }))
-            : [{ labelOrDesc: 'پوز اصلی (سامان)', amount: '' }]
+            : [{ labelOrDesc: 'پارسیان', amount: '' }]
         );
 
         setCreditEntries(
@@ -517,7 +517,7 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))', gap: '1.25rem' }}>
             <RepeatableEntryList
               title="فروش دستگاه‌های کارتخوان (پوز)"
-              labelPlaceholder="نام یا شماره پوز (مثلاً سامان/پارسیان)"
+              labelPlaceholder="نام یا شماره پوز (مثلاً پارسیان/سامان)"
               items={posEntries}
               onChange={setPosEntries}
               accentColor="#6366f1"

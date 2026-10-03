@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ShiftEntryForm from './ShiftEntryForm';
 import type { ShiftFullRecord } from '../../electron/services/shift.service';
-import { PlusCircle, History, Clock, RefreshCw, CheckCircle2, Lock, Pencil, Sun, Moon, AlertTriangle, User, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, History, Clock, RefreshCw, CheckCircle2, Lock, Pencil, Sun, Moon, AlertTriangle, User, Eye, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { getTodayShamsi } from '../utils/dateUtils';
 import { apiBridge } from '../services/apiBridge';
 import SystemConfirmModal from '../components/SystemConfirmModal';
@@ -15,6 +15,7 @@ interface ShiftRecord {
   shift_type: 'morning' | 'evening';
   system_sales: number;
   cash_amount: number;
+  notes?: string;
   total_pos: number;
   total_credit: number;
   total_card_to_card: number;
@@ -542,7 +543,16 @@ export default function AccountantDashboard() {
                   const isSurplus = s.unknown_remainder > 0;
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.875rem' }}>
-                      <td style={{ padding: '0.85rem 0.5rem', color: '#f8fafc', fontWeight: 600 }}>{s.shift_date_shamsi}</td>
+                      <td style={{ padding: '0.85rem 0.5rem', color: '#f8fafc', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span>{s.shift_date_shamsi}</span>
+                          {s.notes && (
+                            <span title={`توضیحات: ${s.notes}`} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                              <FileText size={14} color="#38bdf8" />
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td style={{ padding: '0.85rem 0.5rem' }}>
                         <span style={{
                           padding: '0.2rem 0.6rem',
@@ -963,6 +973,21 @@ export default function AccountantDashboard() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+
+              {/* Shift Notes */}
+              <div style={{ background: 'rgba(15, 23, 42, 0.5)', borderRadius: '14px', padding: '1rem', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#38bdf8', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={16} />
+                  <span>توضیحات و ملاحظات شیفت</span>
+                </div>
+                {selectedShiftDetails.notes ? (
+                  <div style={{ color: '#f8fafc', fontSize: '0.875rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', background: 'rgba(30, 41, 59, 0.6)', padding: '0.75rem 1rem', borderRadius: '8px' }}>
+                    {selectedShiftDetails.notes}
+                  </div>
+                ) : (
+                  <div style={{ color: '#64748b', fontSize: '0.825rem' }}>توضیحاتی برای این شیفت ثبت نشده است.</div>
                 )}
               </div>
             </div>

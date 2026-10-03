@@ -375,6 +375,7 @@ export interface AccountantShiftRecord {
   shift_type: 'morning' | 'evening';
   system_sales: number;
   cash_amount: number;
+  notes?: string;
   total_pos: number;
   total_credit: number;
   total_card_to_card: number;
@@ -391,7 +392,7 @@ export async function getAccountantShifts(accountantId: number): Promise<{ succe
 
 
     const [rows]: any = await db.execute(
-      `SELECT id, shift_date_shamsi, shift_type, system_sales, cash_amount, status, created_at
+      `SELECT id, shift_date_shamsi, shift_type, system_sales, cash_amount, notes, status, created_at
        FROM shifts
        WHERE accountant_id = ?
        ORDER BY shift_date_shamsi DESC, id DESC`,
@@ -477,6 +478,7 @@ export async function getAccountantShifts(accountantId: number): Promise<{ succe
         total_known_shortage: calc.totalKnownShortage,
         total_known_surplus: calc.totalKnownSurplus,
         unknown_remainder: calc.unknownRemainder,
+        notes: row.notes || '',
         status: row.status,
         created_at: row.created_at,
       });
