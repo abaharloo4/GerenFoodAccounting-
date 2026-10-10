@@ -45,16 +45,26 @@ export default function RepeatableEntryList({
       .replace(/[٠-٩]/g, (d) => '٠١٢٣۴٥٦٧٨٩'.indexOf(d).toString());
   };
 
+  const formatAmountValue = (val: number | string): string => {
+    if (val === '' || val === null || val === undefined) return '';
+    const cleanDigits = normalizeDigits(String(val)).replace(/[^\d]/g, '');
+    if (!cleanDigits) return '';
+    return Number(cleanDigits).toLocaleString('en-US');
+  };
+
   const handleAmountChange = (index: number, val: string) => {
     const normalized = normalizeDigits(val);
     const cleanDigits = normalized.replace(/[^\d]/g, '');
     const newItems = [...items];
-    newItems[index].amount = cleanDigits ? Number(cleanDigits) : '';
+    newItems[index].amount = cleanDigits ? Number(cleanDigits).toLocaleString('en-US') : '';
     onChange(newItems);
   };
 
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    return items.reduce((sum, item) => {
+      const cleanDigits = normalizeDigits(String(item.amount || '')).replace(/[^\d]/g, '');
+      return sum + (Number(cleanDigits) || 0);
+    }, 0);
   };
 
   const formatCurrency = (val: number) => {
@@ -120,25 +130,32 @@ export default function RepeatableEntryList({
                 boxSizing: 'border-box',
               }}
             />
-            <input
-              type="text"
-              placeholder="مبلغ (ریال)"
-              value={item.amount}
-              onChange={(e) => handleAmountChange(index, e.target.value)}
-              style={{
-                flex: 1,
-                padding: '0.75rem 1rem',
-                background: 'rgba(30, 41, 59, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                color: '#f8fafc',
-                fontSize: '0.9rem',
-                textAlign: 'left',
-                direction: 'ltr',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <input
+                type="text"
+                placeholder="مبلغ (ریال)"
+                value={formatAmountValue(item.amount)}
+                onChange={(e) => handleAmountChange(index, e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '10px',
+                  color: '#f8fafc',
+                  fontSize: '0.9rem',
+                  textAlign: 'left',
+                  direction: 'ltr',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {item.amount !== '' && item.amount !== undefined && Number(normalizeDigits(String(item.amount)).replace(/[^\d]/g, '')) > 0 && (
+                <div style={{ fontSize: '0.725rem', color: '#94a3b8', marginTop: '0.2rem', direction: 'rtl', textAlign: 'right' }}>
+                  معادل: {Number(normalizeDigits(String(item.amount)).replace(/[^\d]/g, '')).toLocaleString('fa-IR')} ریال
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => handleRemoveItem(index)}

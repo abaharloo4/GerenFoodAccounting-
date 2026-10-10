@@ -43,9 +43,19 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
     return normalized ? Number(normalized) : 0;
   };
 
-  // Lists
+  const formatInputWithCommas = (val: string): string => {
+    if (!val) return '';
+    const normalized = val
+      .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+      .replace(/[٠-٩]/g, (d) => '٠١٢٣۴٥٦٧۸۹'.indexOf(d).toString())
+      .replace(/[^\d]/g, '');
+    return normalized ? Number(normalized).toLocaleString('en-US') : '';
+  };
+
+  // Lists - Two default POS entries as requested: پوز اصلی پارسیان and پوز سیار پارسیان
   const [posEntries, setPosEntries] = useState<EntryItem[]>([
-    { labelOrDesc: 'پارسیان', amount: '' },
+    { labelOrDesc: 'پوز اصلی پارسیان', amount: '' },
+    { labelOrDesc: 'پوز سیار پارسیان', amount: '' },
   ]);
   const [creditEntries, setCreditEntries] = useState<EntryItem[]>([]);
   const [cardToCardEntries, setCardToCardEntries] = useState<EntryItem[]>([]);
@@ -75,43 +85,71 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
         const s = res.shift;
         setShiftId(s.id);
         setShiftStatus(s.status);
-        setSystemSalesStr(s.system_sales ? String(s.system_sales) : '');
-        setCashAmountStr(s.cash_amount ? String(s.cash_amount) : '');
+        setSystemSalesStr(s.system_sales ? Number(s.system_sales).toLocaleString('en-US') : '');
+        setCashAmountStr(s.cash_amount ? Number(s.cash_amount).toLocaleString('en-US') : '');
         setShiftNotes(s.notes || '');
 
         setPosEntries(
           Array.isArray(s.pos_entries) && s.pos_entries.length > 0
-            ? s.pos_entries.map((p) => ({ labelOrDesc: p.pos_label || '', amount: p.amount ?? '' }))
-            : [{ labelOrDesc: 'پارسیان', amount: '' }]
+            ? s.pos_entries.map((p) => ({
+                labelOrDesc: p.pos_label || '',
+                amount: p.amount ? Number(p.amount).toLocaleString('en-US') : '',
+              }))
+            : [
+                { labelOrDesc: 'پوز اصلی پارسیان', amount: '' },
+                { labelOrDesc: 'پوز سیار پارسیان', amount: '' },
+              ]
         );
 
         setCreditEntries(
           Array.isArray(s.credit_entries)
-            ? s.credit_entries.map((c) => ({ labelOrDesc: c.description || '', amount: c.amount ?? '' }))
+            ? s.credit_entries.map((c) => ({
+                labelOrDesc: c.description || '',
+                amount: c.amount ? Number(c.amount).toLocaleString('en-US') : '',
+              }))
             : []
         );
 
         setCardToCardEntries(
           Array.isArray(s.card_to_card_entries)
-            ? s.card_to_card_entries.map((c) => ({ labelOrDesc: c.description || '', amount: c.amount ?? '' }))
+            ? s.card_to_card_entries.map((c) => ({
+                labelOrDesc: c.description || '',
+                amount: c.amount ? Number(c.amount).toLocaleString('en-US') : '',
+              }))
             : []
         );
 
         setShortageEntries(
           Array.isArray(s.shortage_entries)
-            ? s.shortage_entries.map((sh) => ({ labelOrDesc: sh.description || '', amount: sh.amount ?? '' }))
+            ? s.shortage_entries.map((sh) => ({
+                labelOrDesc: sh.description || '',
+                amount: sh.amount ? Number(sh.amount).toLocaleString('en-US') : '',
+              }))
             : []
         );
 
         setSurplusEntries(
           Array.isArray(s.surplus_entries)
-            ? s.surplus_entries.map((su) => ({ labelOrDesc: su.description || '', amount: su.amount ?? '' }))
+            ? s.surplus_entries.map((su) => ({
+                labelOrDesc: su.description || '',
+                amount: su.amount ? Number(su.amount).toLocaleString('en-US') : '',
+              }))
             : []
         );
       } else {
         setShiftId(null);
         setShiftStatus('open');
         setShiftNotes('');
+        setSystemSalesStr('');
+        setCashAmountStr('');
+        setPosEntries([
+          { labelOrDesc: 'پوز اصلی پارسیان', amount: '' },
+          { labelOrDesc: 'پوز سیار پارسیان', amount: '' },
+        ]);
+        setCreditEntries([]);
+        setCardToCardEntries([]);
+        setShortageEntries([]);
+        setSurplusEntries([]);
       }
     } catch {
       // Keep defaults
@@ -458,9 +496,9 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
               </label>
               <input
                 type="text"
-                placeholder="مبلغ به ریال (مثال: 5000000)"
+                placeholder="مبلغ به ریال (مثال: 50,000,000)"
                 value={systemSalesStr}
-                onChange={(e) => setSystemSalesStr(e.target.value)}
+                onChange={(e) => setSystemSalesStr(formatInputWithCommas(e.target.value))}
                 style={{
                   width: '100%',
                   padding: '0.8rem 1rem',
@@ -488,9 +526,9 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
               </label>
               <input
                 type="text"
-                placeholder="مبلغ به ریال (مثال: 500000)"
+                placeholder="مبلغ به ریال (مثال: 5,000,000)"
                 value={cashAmountStr}
-                onChange={(e) => setCashAmountStr(e.target.value)}
+                onChange={(e) => setCashAmountStr(formatInputWithCommas(e.target.value))}
                 style={{
                   width: '100%',
                   padding: '0.8rem 1rem',
@@ -517,7 +555,7 @@ export default function ShiftEntryForm({ onBack, initialDateShamsi, initialShift
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))', gap: '1.25rem' }}>
             <RepeatableEntryList
               title="فروش دستگاه‌های کارتخوان (پوز)"
-              labelPlaceholder="نام یا شماره پوز (مثلاً پارسیان/سامان)"
+              labelPlaceholder="نام یا شماره پوز (مثلاً پوز اصلی پارسیان / پوز سیار پارسیان)"
               items={posEntries}
               onChange={setPosEntries}
               accentColor="#6366f1"
